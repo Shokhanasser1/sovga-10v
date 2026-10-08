@@ -39,7 +39,11 @@ class VerifySerializer(PhoneSerializer):
 def customer_payload(customer: Customer | None) -> dict | None:
     if customer is None:
         return None
-    return {"phone": customer.phone, "name": customer.name, "language": customer.language}
+    address = customer.addresses.first()  # последний использованный
+    return {
+        "phone": customer.phone, "name": customer.name, "language": customer.language,
+        "address": {"text": address.text, "landmark": address.landmark} if address else None,
+    }
 
 
 def current_customer(request) -> Customer | None:

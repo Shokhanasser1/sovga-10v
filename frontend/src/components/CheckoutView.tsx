@@ -28,8 +28,15 @@ export function CheckoutView({ lang }: { lang: Locale }) {
   useEffect(() => {
     fetchMe()
       .then((customer) => {
-        if (customer) setReady(true);
-        else router.replace(`/${lang}/login?next=${encodeURIComponent(`/${lang}/checkout`)}`);
+        if (customer) {
+          setReady(true);
+          // Вернувшемуся покупателю — последний адрес; поля можно поправить.
+          const saved = customer.address;
+          if (saved) {
+            setAddress((current) => current || saved.text);
+            setLandmark((current) => current || saved.landmark);
+          }
+        } else router.replace(`/${lang}/login?next=${encodeURIComponent(`/${lang}/checkout`)}`);
       })
       .catch((failure: Error) => setError(failure.message));
   }, [lang, router]);

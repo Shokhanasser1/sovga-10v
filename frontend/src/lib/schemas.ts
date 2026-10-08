@@ -117,7 +117,12 @@ export type Page<T> = { count: number; next: string | null; previous: string | n
 
 // --- Вход, корзина, заказы ---
 
-export const customerSchema = z.object({ phone: z.string(), name: z.string(), language: z.string() });
+export const customerSchema = z.object({
+  phone: z.string(),
+  name: z.string(),
+  language: z.string(),
+  address: z.object({ text: z.string(), landmark: z.string() }).nullable().default(null),
+});
 export const meSchema = z.object({ customer: customerSchema.nullable() });
 export const codeSentSchema = z.object({ sent: z.boolean(), channel: z.string(), resend_after: z.number() });
 

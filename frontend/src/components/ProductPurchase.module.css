@@ -187,3 +187,11 @@
     aspect-ratio: 4 / 3;
   }
 }
+
+.warning {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--saffron-tint);
+  font-size: 0.92rem;
+}

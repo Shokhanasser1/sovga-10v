@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from django.db import transaction
 
 from apps.catalog.models import Variant
-from apps.customers.models import Customer
+from apps.customers.models import Address, Customer
 from apps.inventory.services import release_order_units
 from apps.notifications.outbox import emit
 from apps.sourcing.models import Offer, Reservation, Supplier
@@ -126,6 +126,8 @@ def create_order(
     OrderEvent.objects.create(
         order=order, status_to=order.status, actor=f"customer:{customer.phone}", note="Заказ оформлен", created_at=now
     )
+    # Вернувшемуся покупателю оформление подставит последний адрес.
+    Address.objects.update_or_create(customer=customer, text=address.text, landmark=address.landmark)
     emit("order.created", _created_payload(order), now)
     return order
 

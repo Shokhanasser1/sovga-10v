@@ -235,3 +235,23 @@ def test_supplier_confirmation_does_not_rewind_a_started_payment(shop, customer)
         confirm_sourcing(order, NOW, actor="manager:anna")
     order.refresh_from_db()
     assert order.status == Order.Status.AWAITING_PAYMENT
+
+
+def test_order_remembers_the_address_for_next_time(shop, customer):
+    from django.test import Client
+
+    from apps.customers.models import Address
+
+    client = Client()
+    client.force_login(customer.user)
+    assert client.get("/api/v1/auth/me/").json()["customer"]["address"] is None
+
+    order_for(customer, CartItem(PHONE_SKU, 1))
+    create_order(customer, [CartItem(PHONE_SKU, 1)], "card", DeliveryAddress("Ташкент, Юнусабад 4-12", "у школы"), "", NOW)
+
+    assert Address.objects.filter(customer=customer).count() == 2
+    assert client.get("/api/v1/auth/me/").json()["customer"]["address"] == {
+        "text": "Ташкент, Юнусабад 4-12", "landmark": "у школы",
+    }
+    create_order(customer, [CartItem(PHONE_SKU, 1)], "card", DeliveryAddress("Ташкент, Юнусабад 4-12", "у школы"), "", NOW)
+    assert Address.objects.filter(customer=customer).count() == 2

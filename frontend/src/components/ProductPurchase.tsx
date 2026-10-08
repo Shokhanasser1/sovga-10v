@@ -124,6 +124,12 @@ export function ProductPurchase({ product, lang }: { product: ProductDetail; lan
             </fieldset>
           ))}
 
+          {variant.axes.sim === "esim_only" && (
+            <p className={styles.warning} role="note">
+              {dict.esimOnlyWarning}
+            </p>
+          )}
+
           <div className={styles.priceBlock} aria-live="polite">
             <p className={`price ${styles.price}`}>
               {offer?.price_uzs ? formatSum(offer.price_uzs, lang) : offers || offersFailed ? dict.noPrice : "…"}
