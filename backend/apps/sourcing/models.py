@@ -147,3 +147,16 @@ class SupplierFeedRow(models.Model):
 
     def __str__(self) -> str:
         return f"{self.supplier_code} {self.name}".strip()
+
+
+class Reservation(models.Model):
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name="reservations")
+    qty = models.PositiveIntegerField()
+    ref = models.CharField(max_length=64, help_text="Корзина или заказ")
+    is_soft = models.BooleanField(help_text="Товар поставщика до его подтверждения")
+    expires_at = models.DateTimeField()
+    released_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.ref}: {self.offer} × {self.qty}"
