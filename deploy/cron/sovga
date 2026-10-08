@@ -1,0 +1,8 @@
+# /etc/cron.d/sovga — фоновые задачи и ежедневная копия базы. Логи: journalctl -t sovga-jobs
+SHELL=/bin/sh
+
+# Прайсы, курс ЦБ, пересчёт цен, просрочки, молчащие поставщики, уведомления — каждые 15 минут
+*/15 * * * * sovga cd /srv/sovga/backend && .venv/bin/python manage.py run_jobs 2>&1 | logger -t sovga-jobs
+
+# Копия базы в 03:30, хранится 14 дней (восстановление — docs/deploy.md)
+30 3 * * * postgres pg_dump -Fc sovga > /var/backups/sovga/sovga-$(date +\%F).dump && find /var/backups/sovga -name '*.dump' -mtime +14 -delete

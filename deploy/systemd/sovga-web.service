@@ -1,0 +1,16 @@
+# /etc/systemd/system/sovga-web.service — витрина Next.js (после npm run build)
+[Unit]
+Description=Sovga storefront (Next.js)
+After=network.target sovga-api.service
+
+[Service]
+User=sovga
+Group=sovga
+WorkingDirectory=/srv/sovga/frontend
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/npm start -- -H 127.0.0.1 -p 3000
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

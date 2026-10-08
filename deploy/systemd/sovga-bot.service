@@ -1,0 +1,15 @@
+# /etc/systemd/system/sovga-bot.service — Telegram-бот и быстрая рассылка уведомлений
+[Unit]
+Description=Sovga Telegram bot
+After=network.target sovga-api.service
+
+[Service]
+User=sovga
+Group=sovga
+WorkingDirectory=/srv/sovga/backend
+ExecStart=/srv/sovga/backend/.venv/bin/python manage.py run_bot
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

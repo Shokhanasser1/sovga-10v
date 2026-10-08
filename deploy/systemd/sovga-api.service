@@ -1,0 +1,15 @@
+# /etc/systemd/system/sovga-api.service — Django (API, админка, колбэки оплаты)
+[Unit]
+Description=Sovga API (Django + gunicorn)
+After=network.target postgresql.service
+
+[Service]
+User=sovga
+Group=sovga
+WorkingDirectory=/srv/sovga/backend
+ExecStart=/srv/sovga/backend/.venv/bin/gunicorn config.wsgi:application --bind 127.0.0.1:8000 --workers 3 --timeout 60
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
