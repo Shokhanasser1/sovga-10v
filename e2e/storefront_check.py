@@ -2,15 +2,20 @@
 
 Что нужно запущенным:
   1. Django с демо-данными: из backend/ — manage.py seed_demo, затем manage.py runserver
-     с DEBUG=true и OTP_FIXED_CODE=000000 (код входа для проверки оформления заказа)
+     с DEBUG=true, OTP_FIXED_CODE=000000 (код входа для проверки оформления заказа),
+     PAYME_MERCHANT_ID=e2e и PAYME_KEY=e2e-payme-key (скрипт сам играет роль Payme)
   2. Витрина: из frontend/ — npm run build, затем npm start
-Запуск: python e2e/storefront_check.py   (адрес витрины — переменная STOREFRONT_URL)
+Запуск: python e2e/storefront_check.py   (адреса — переменные STOREFRONT_URL и API_URL)
 Скриншоты сохраняются в e2e/shots/.
 """
 
+import base64
+import json
 import os
 import random
 import sys
+import time
+import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -18,7 +23,9 @@ from playwright.sync_api import sync_playwright
 OUT = Path(__file__).parent / "shots"
 OUT.mkdir(exist_ok=True)
 BASE = os.environ.get("STOREFRONT_URL", "http://localhost:3000").rstrip("/")
+API = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
 OTP_CODE = os.environ.get("E2E_OTP_CODE", "000000")
+PAYME_KEY = os.environ.get("E2E_PAYME_KEY", "e2e-payme-key")
 # Свой номер на каждый прогон: лимиты на номер (раз в минуту, 5 в час) не мешают повторным прогонам.
 BUYER_PHONE = f"90 {random.randint(100, 999)} {random.randint(10, 99)} {random.randint(10, 99)}"
 problems: list[str] = []
@@ -28,6 +35,43 @@ def check(condition: bool, message: str) -> None:
     print(("OK   " if condition else "FAIL ") + message)
     if not condition:
         problems.append(message)
+
+
+def payme(method: str, params: dict) -> dict:
+    """Запрос от имени Payme к нашему Merchant API — как это делает их сервер после оплаты картой."""
+    auth = base64.b64encode(f"Paycom:{PAYME_KEY}".encode()).decode()
+    request = urllib.request.Request(
+        f"{API}/api/v1/payments/payme/",
+        data=json.dumps({"id": 1, "method": method, "params": params}).encode(),
+        headers={"Content-Type": "application/json", "Authorization": f"Basic {auth}"},
+    )
+    with urllib.request.urlopen(request, timeout=10) as response:
+        return json.load(response)
+
+
+def open_cart(page) -> None:
+    page.goto(f"{BASE}/ru/product/iphone-16-pro")
+    page.wait_for_load_state("networkidle")
+    page.get_by_role("button", name="Купить").click()
+    page.wait_for_url("**/ru/cart", timeout=10000)
+    try:
+        page.wait_for_selector("input[type=radio]:checked", timeout=15000)
+    except Exception:
+        page.screenshot(path=OUT / "9-cart-failed.png", full_page=True)
+        raise
+
+
+def place_order(page, screenshot: str = "") -> str:
+    """Заполняет адрес на оформлении, подтверждает и ждёт страницу заказа. Возвращает номер заказа."""
+    page.get_by_label("Адрес доставки").fill("Ташкент, Юнусабад 4-12, кв. 7")
+    page.get_by_label("Ориентир для курьера").fill("напротив школы №110")
+    page.wait_for_function("!document.querySelector('button[type=submit]').disabled", timeout=10000)
+    if screenshot:
+        page.screenshot(path=OUT / screenshot, full_page=True)
+    page.get_by_role("button", name="Подтвердить заказ").click()
+    page.wait_for_url("**/ru/orders/SG*", timeout=15000)
+    page.wait_for_selector("text=Ждёт оплаты", timeout=10000)
+    return page.url.rstrip("/").rsplit("/", 1)[1]
 
 
 with sync_playwright() as p:
@@ -119,41 +163,10 @@ with sync_playwright() as p:
     mobile.wait_for_load_state("networkidle")
     mobile.screenshot(path=OUT / "8-product-mobile.png", full_page=True)
 
-    # Покупка целиком: карточка → корзина с подарком → вход по коду → оформление → заказ → отмена.
+    # Покупка целиком: карточка → корзина с подарком → вход по коду → оформление → оплата через Payme.
     buyer = browser.new_context(viewport={"width": 1366, "height": 900}).new_page()
     buyer.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
-    api_log: list[str] = []
-    buyer.on("response", lambda r: api_log.append(f"{r.status} {r.request.method} {r.url}") if "/api/" in r.url else None)
-    buyer.on("requestfailed", lambda r: api_log.append(f"FAILED {r.method} {r.url} {r.failure}") if "/api/" in r.url else None)
-    buyer.on("requestfinished", lambda r: api_log.append(f"FINISHED {r.method} {r.url}") if "/api/" in r.url else None)
-    buyer.on("request", lambda r: api_log.append(f"REQUEST {r.method} {r.url}") if "/api/" in r.url else None)
-    buyer.on("console", lambda msg: api_log.append(f"console.{msg.type}: {msg.text}"))
-    buyer.goto(f"{BASE}/ru/product/iphone-16-pro")
-    buyer.wait_for_load_state("networkidle")
-    buyer.get_by_role("button", name="Купить").click()
-    buyer.wait_for_url("**/ru/cart", timeout=10000)
-    try:
-        buyer.wait_for_selector("input[type=radio]:checked", timeout=15000)
-    except Exception:
-        buyer.screenshot(path=OUT / "9-cart-failed.png", full_page=True)
-        print("Запросы к API со страницы покупателя:")
-        for entry in api_log:
-            print(entry)
-        print("Корзина в браузере:", buyer.evaluate("localStorage.getItem('sovga:cart:v1')"))
-        manual = buyer.evaluate(
-            """async () => {
-                const cart = JSON.parse(localStorage.getItem('sovga:cart:v1') || '[]');
-                const token = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
-                const response = await fetch('http://localhost:8000/api/v1/orders/quote/', {
-                    method: 'POST', credentials: 'include',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': token},
-                    body: JSON.stringify({items: cart.map(i => ({sku: i.sku, qty: i.qty, gift_sku: i.gift_sku ?? null})), payment_method: 'card'}),
-                });
-                return response.status + ' ' + (await response.text()).slice(0, 600);
-            }"""
-        )
-        print("Тот же расчёт вручную:", manual)
-        raise
+    open_cart(buyer)
     buyer.screenshot(path=OUT / "9-cart.png", full_page=True)
     gift = buyer.locator("input[type=radio]:checked").locator("xpath=..").inner_text()
     check("Чехол" in gift, f"корзина: подарок выбран сам ({gift.strip()[:40]})")
@@ -164,16 +177,37 @@ with sync_playwright() as p:
     buyer.get_by_label("Код из сообщения").fill(OTP_CODE)
     buyer.get_by_role("button", name="Войти").click()
     buyer.wait_for_url("**/ru/checkout", timeout=10000)
-    buyer.get_by_label("Адрес доставки").fill("Ташкент, Юнусабад 4-12, кв. 7")
-    buyer.get_by_label("Ориентир для курьера").fill("напротив школы №110")
-    buyer.wait_for_function("!document.querySelector('button[type=submit]').disabled", timeout=10000)
-    buyer.screenshot(path=OUT / "10-checkout.png", full_page=True)
-    buyer.get_by_role("button", name="Подтвердить заказ").click()
-    buyer.wait_for_url("**/ru/orders/SG*", timeout=15000)
-    buyer.wait_for_selector("text=Ждёт оплаты", timeout=10000)
+    number = place_order(buyer, screenshot="10-checkout.png")
     buyer.screenshot(path=OUT / "11-order.png", full_page=True)
     check(buyer.get_by_text("подарок", exact=True).count() >= 1, "заказ: подарок в составе")
     check(buyer.locator("header").get_by_text("Корзина").inner_text().strip() == "Корзина", "корзина очищена после заказа")
+    check(buyer.get_by_role("button", name="Оплатить через Payme").count() == 1, "заказ: кнопка оплаты Payme")
+
+    total = buyer.context.request.get(f"{API}/api/v1/orders/{number}/").json()["total_uzs"]
+    account = {"order_id": number}
+    transaction = f"e2e-{random.randint(10**8, 10**9)}"
+    allowed = payme("CheckPerformTransaction", {"amount": total * 100, "account": account})
+    created = payme("CreateTransaction", {"id": transaction, "time": int(time.time() * 1000), "amount": total * 100, "account": account})
+    performed = payme("PerformTransaction", {"id": transaction})
+    check(allowed.get("result", {}).get("allow") is True and "detail" in allowed["result"], f"Payme: можно платить, чек с ИКПУ ({allowed})")
+    check(created.get("result", {}).get("state") == 1, f"Payme: транзакция создана ({created})")
+    check(performed.get("result", {}).get("state") == 2, f"Payme: транзакция проведена ({performed})")
+    buyer.reload()
+    buyer.wait_for_selector("text=Оплачен", timeout=10000)
+    buyer.screenshot(path=OUT / "12-paid.png", full_page=True)
+    check(buyer.get_by_role("button", name="Отменить заказ").count() == 0, "оплаченный заказ покупатель сам не отменяет")
+    check(buyer.get_by_role("button", name="Оплатить через Payme").count() == 0, "оплаченный заказ: кнопок оплаты нет")
+    # Возврат через Payme отменяет заказ и снимает резерв — повторные прогоны снова находят товар на складе.
+    refunded = payme("CancelTransaction", {"id": transaction, "reason": 5})
+    check(refunded.get("result", {}).get("state") == -2, f"Payme: возврат проведён ({refunded})")
+    buyer.reload()
+    buyer.wait_for_selector("text=Отменён", timeout=10000)
+
+    # Второй заказ: покупатель уже вошёл — сразу оформление, затем отмена.
+    open_cart(buyer)
+    buyer.get_by_role("link", name="Оформить заказ").click()
+    buyer.wait_for_url("**/ru/checkout", timeout=10000)
+    place_order(buyer)
     buyer.get_by_role("button", name="Отменить заказ").click()
     buyer.wait_for_selector("text=Отменён", timeout=10000)
     check(buyer.get_by_role("button", name="Отменить заказ").count() == 0, "заказ отменён покупателем")
