@@ -3,15 +3,22 @@
 Без всех IMEI и отметок UzIMEI заказ не отгружается (спецификация, раздел 3.2 п. 4).
 """
 
+from dataclasses import asdict
 from datetime import datetime
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import F, Q, Value
+from django.db.models.functions import Greatest
+
+from apps.delivery.carriers import CARRIERS, Handover, HandoverError
+from apps.delivery.models import Shipment
 
 from apps.inventory.imei import is_valid_imei
 from apps.inventory.models import InventoryUnit
+from apps.inventory.services import release_unit, sync_own_offer
 from apps.sourcing.matching import variant_label
-from apps.sourcing.models import Warehouse
+from apps.sourcing.models import Offer, Reservation, Warehouse
+from apps.sourcing.reservations import release
 
 from .models import Order, OrderLine
 from .services import OrderError, transition
@@ -77,35 +84,20 @@ def add_unit(line: OrderLine, imei: str, now: datetime, actor: str, uzimei_regis
         raise OrderError("Устройство с таким IMEI уже есть в системе")
     unit = InventoryUnit(
         variant=line.variant, warehouse=_receiving_warehouse(), imei1=imei, cost_usd=line.cost_usd,
-        status=U.RESERVED, order_line=line, **registered,
+        status=U.RESERVED, order_line=line, received_for_order=True, **registered,
     )
     unit.full_clean()
     unit.save()
     return unit
 
 
-def _release(unit: InventoryUnit) -> None:
-    """Своё устройство — обратно на склад; устройство поставщика, принятое под заказ, — забываем."""
-    if unit.order_line.offer and unit.order_line.offer.is_own:
-        unit.status, unit.order_line = U.IN_STOCK, None
-        unit.save(update_fields=["status", "order_line"])
-    else:
-        unit.delete()
-
-
 @transaction.atomic
 def remove_unit(unit: InventoryUnit, now: datetime, actor: str) -> None:
-    unit = InventoryUnit.objects.select_related("order_line__offer").get(pk=unit.pk)
+    unit = InventoryUnit.objects.select_related("order_line").get(pk=unit.pk)
     if unit.order_line is None:
         raise OrderError("Устройство не привязано к заказу")
     _lock_picking(unit.order_line.order_id)
-    _release(unit)
-
-
-def release_units(order: Order) -> None:
-    """Заказ отменён во время сборки."""
-    for unit in InventoryUnit.objects.select_related("order_line__offer").filter(order_line__order=order):
-        _release(unit)
+    release_unit(unit)
 
 
 @transaction.atomic
@@ -134,3 +126,50 @@ def picking_problems(order: Order) -> list[str]:
             elif unit.uzimei_status != Z.REGISTERED:
                 problems.append(f"IMEI {unit.imei1}: нет отметки UzIMEI")
     return problems
+
+
+def _write_off(order: Order, now: datetime) -> None:
+    """Товар ушёл: устройства проданы, резервы сняты, остатки предложений уменьшены."""
+    InventoryUnit.objects.filter(order_line__order=order).update(status=U.SOLD)
+    for reservation in Reservation.objects.filter(ref=order.number, released_at__isnull=True):
+        release(reservation, now)
+    for line in order.lines.select_related("offer__warehouse", "variant__product_model__category"):
+        if line.offer is None:
+            continue
+        if line.offer.is_own and _is_serialized(line):
+            sync_own_offer(line.variant, line.offer.warehouse)  # свой остаток = устройства на складе
+        else:
+            Offer.objects.filter(pk=line.offer_id).update(
+                qty_available=Greatest(F("qty_available") - line.qty, Value(0))
+            )
+
+
+@transaction.atomic
+def ship(order: Order, carrier_code: str, handover: Handover, now: datetime, actor: str) -> Order:
+    """Передача курьеру или в службу доставки — только собранный заказ со всеми IMEI и отметками UzIMEI."""
+    locked = _lock_picking(order.pk)
+    problems = picking_problems(locked)
+    if problems:
+        raise OrderError("Нельзя отгрузить: " + "; ".join(problems))
+    carrier = CARRIERS.get(carrier_code)
+    if carrier is None:
+        raise OrderError("Неизвестный способ доставки")
+    try:
+        handover = carrier.prepare(handover)
+    except HandoverError as error:
+        raise OrderError(error.message) from error
+    Shipment.objects.create(order=locked, carrier=carrier.code, handed_at=now, **asdict(handover))
+    _write_off(locked, now)
+    return transition(
+        locked, S.HANDED_TO_CARRIER, now, actor, note=carrier.describe(handover), allowed_from={S.PICKING}
+    )
+
+
+@transaction.atomic
+def deliver(order: Order, now: datetime, actor: str) -> Order:
+    delivered = transition(
+        order, S.DELIVERED, now, actor, note="Доставлен",
+        allowed_from={S.HANDED_TO_CARRIER}, denied_message="Заказ ещё не передан в доставку",
+    )
+    Shipment.objects.filter(order=delivered).update(delivered_at=now)
+    return delivered

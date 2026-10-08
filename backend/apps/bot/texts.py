@@ -49,6 +49,8 @@ CUSTOMER = {
         "paid": "Спасибо! Оплата получена, собираем заказ.",
         "refund": "Если оплата уже прошла, деньги вернутся на карту.",
         "reason": "Причина: {note}",
+        "courier": "Курьер: {name}, {phone}",
+        "service": "Служба доставки: {service}, накладная {tracking}",
     },
     "uz": {
         "linked": "Tayyor! Buyurtmalaringiz holati shu yerga keladi.\n/orders — buyurtmalarim, /stop — yubormaslik.",
@@ -61,6 +63,8 @@ CUSTOMER = {
         "paid": "Rahmat! Toʻlov qabul qilindi, buyurtmani yigʻyapmiz.",
         "refund": "Agar toʻlov oʻtgan boʻlsa, pul kartangizga qaytariladi.",
         "reason": "",
+        "courier": "Kuryer: {name}, {phone}",
+        "service": "Yetkazib berish xizmati: {service}, yuk xati {tracking}",
     },
 }
 

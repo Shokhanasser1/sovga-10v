@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.utils import timezone
 
+from apps.delivery.models import Shipment
 from apps.notifications.outbox import register
 from apps.notifications.telegram import notify_managers, send_message
 from apps.orders.models import Order, SupplierRequest
@@ -66,6 +67,11 @@ def status_text(order: Order, previous: str | None, status: str, note: str) -> s
         lines.append(words["pay_now"])
     elif status == S.PAID:
         lines.append(words["paid"])
+    elif status == S.HANDED_TO_CARRIER and (shipment := Shipment.objects.filter(order=order).first()):
+        if shipment.carrier == Shipment.Carrier.OWN:
+            lines.append(words["courier"].format(name=shipment.courier_name, phone=shipment.courier_phone))
+        else:
+            lines.append(words["service"].format(service=shipment.service_name, tracking=shipment.tracking))
     elif status == S.CANCELLED:
         if previous in (S.AWAITING_PAYMENT, S.PAID, S.PICKING):
             lines.append(words["refund"])

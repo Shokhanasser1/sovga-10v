@@ -1,6 +1,7 @@
 from django.contrib import admin, messages
 from django.utils import timezone
 
+from apps.delivery.models import Shipment
 from apps.payments.admin import PaymentInline
 
 from .models import Order, OrderEvent, OrderLine, SupplierRequest
@@ -41,6 +42,18 @@ class SupplierRequestInline(admin.TabularInline):
         return False
 
 
+class ShipmentInline(admin.StackedInline):
+    model = Shipment
+    extra = 0
+    can_delete = False
+    fields = ("carrier", "courier_name", "courier_phone", "service_name", "tracking", "cost_uzs", "handed_at",
+              "delivered_at")
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     """Статус меняется только действиями — через машину состояний, с записью в историю."""
@@ -48,7 +61,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ("number", "customer", "status", "total_uzs", "created_at", "sla_deadline")
     list_filter = ("status", "payment_method")
     search_fields = ("number", "customer__phone")
-    inlines = [OrderLineInline, SupplierRequestInline, PaymentInline, OrderEventInline]
+    inlines = [OrderLineInline, SupplierRequestInline, PaymentInline, ShipmentInline, OrderEventInline]
     actions = ["confirm_sourcing_action", "cancel_action"]
 
     def get_readonly_fields(self, request, obj=None):

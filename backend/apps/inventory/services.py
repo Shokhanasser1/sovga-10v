@@ -50,3 +50,18 @@ def sync_own_offer(variant: Variant, warehouse: Warehouse) -> Offer | None:
     offer.is_active = True
     offer.save()
     return offer
+
+
+def release_unit(unit: InventoryUnit) -> None:
+    """Устройство снято со сборки: своё — обратно на склад, принятое от поставщика под заказ — забываем."""
+    if unit.received_for_order:
+        unit.delete()
+        return
+    unit.status, unit.order_line = InventoryUnit.State.IN_STOCK, None
+    unit.save(update_fields=["status", "order_line"])
+
+
+def release_order_units(order_id: int) -> None:
+    """Заказ отменён во время сборки."""
+    for unit in InventoryUnit.objects.filter(order_line__order_id=order_id, status=InventoryUnit.State.RESERVED):
+        release_unit(unit)

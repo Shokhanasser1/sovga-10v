@@ -91,3 +91,26 @@ def test_nothing_without_a_linked_chat(bot, telegram, customer, shop):
 
     deliver_pending(NOW)
     assert {payload["chat_id"] for method, payload in telegram.calls if method == "sendMessage"} == {"-100"}
+
+
+def test_courier_details_reach_the_customer(linked, telegram, shop):
+    from decimal import Decimal
+
+    from apps.delivery.carriers import Handover
+    from apps.inventory.imei import with_check_digit
+    from apps.inventory.services import receive_unit
+    from apps.orders.fulfilment import add_unit, deliver, ship, start_picking
+
+    device = with_check_digit("35693803560001")
+    receive_unit(variant=shop["phone"], warehouse=shop["warehouse"], cost_usd=Decimal("1000"), imei1=device)
+    order = order_for(linked)
+    start_payment(order, NOW, actor="payme")
+    confirm_payment(order, NOW, actor="payme", provider="Payme")
+    start_picking(order, NOW, actor="manager:anna")
+    add_unit(order.lines.get(), device, NOW, actor="manager:anna", uzimei_registered=True)
+
+    ship(order, "own", Handover(courier_name="Азиз", courier_phone="901234567"), NOW, actor="manager:anna")
+    assert "Курьер: Азиз, +998901234567" in messages(telegram)[-1]
+
+    deliver(order, NOW, actor="manager:anna")
+    assert "Доставлен" in messages(telegram)[-1]

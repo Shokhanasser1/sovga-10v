@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.delivery.models import Shipment
 from apps.notifications.telegram import bot_available
 from apps.payments.links import configured_providers
 
@@ -89,6 +90,7 @@ def order_payload(order: Order) -> dict:
         {"status": event.status_to, "note": event.note, "at": event.created_at.isoformat()}
         for event in order.events.all()
     ]
+    shipment = Shipment.objects.filter(order=order).first()
     return {
         "number": order.number,
         "status": order.status,
@@ -104,6 +106,10 @@ def order_payload(order: Order) -> dict:
         "pay_providers": configured_providers(),
         # Статусы в Telegram: уже приходят, можно подключить или бот не настроен.
         "telegram": "linked" if order.customer.telegram_chat_id else ("available" if bot_available() else "off"),
+        "shipment": {
+            "carrier": shipment.carrier, "courier_name": shipment.courier_name, "courier_phone": shipment.courier_phone,
+            "service_name": shipment.service_name, "tracking": shipment.tracking,
+        } if shipment else None,
         "lines": lines,
         "events": events,
     }

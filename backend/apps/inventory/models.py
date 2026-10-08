@@ -51,6 +51,9 @@ class InventoryUnit(models.Model):
         "orders.OrderLine", null=True, blank=True, on_delete=models.SET_NULL, related_name="units",
         help_text="Строка заказа, под которую собрано или продано устройство",
     )
+    received_for_order = models.BooleanField(
+        default=False, help_text="Принято от поставщика под заказ: при отмене заказа не возвращается на склад"
+    )
     received_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

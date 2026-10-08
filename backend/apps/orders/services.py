@@ -7,6 +7,7 @@ from django.db import transaction
 
 from apps.catalog.models import Variant
 from apps.customers.models import Customer
+from apps.inventory.services import release_order_units
 from apps.notifications.outbox import emit
 from apps.sourcing.models import Offer, Reservation, Supplier
 from apps.sourcing.reservations import release, reserve
@@ -155,6 +156,7 @@ def transition(
     if target == S.CANCELLED:
         for reservation in Reservation.objects.filter(ref=locked.number, released_at__isnull=True):
             release(reservation, now)
+        release_order_units(locked.pk)
     order.status = locked.status
     return locked
 
