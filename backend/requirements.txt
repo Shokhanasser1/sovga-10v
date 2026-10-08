@@ -5,3 +5,5 @@ psycopg2-binary>=2.9.11,<2.10
 requests>=2.32,<3
 openpyxl>=3.1,<4
 django-cors-headers>=4.9,<5
+# Сервер приложения в проде (Linux); на Windows ставится, но не нужен
+gunicorn>=23,<24

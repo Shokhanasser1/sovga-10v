@@ -121,6 +121,31 @@ SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 
+if not DEBUG:
+    # Боевой режим — за nginx с HTTPS (docs/deploy.md). nginx перезаписывает X-Forwarded-Proto,
+    # а gunicorn слушает только 127.0.0.1, так что подделать заголовок снаружи нельзя.
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_HSTS_SECONDS = env.int("SECURE_HSTS_SECONDS", default=60 * 60 * 24 * 30)
+    # Поддомены и список предзагрузки браузеров — решение владельца домена, отменить его трудно:
+    # включать, только когда все поддомены точно работают по HTTPS.
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env.bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", default=False)
+    SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", default=False)
+    SILENCED_SYSTEM_CHECKS = [
+        "security.W005", "security.W021",
+        # http → https перенаправляет nginx: серверная отрисовка витрины ходит в Django по http://127.0.0.1.
+        "security.W008",
+    ]
+
+# Логи — в консоль: на сервере их собирает systemd (journalctl -u sovga-api)
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {"plain": {"format": "{asctime} {levelname} {name}: {message}", "style": "{"}},
+    "handlers": {"console": {"class": "logging.StreamHandler", "formatter": "plain"}},
+    "root": {"handlers": ["console"], "level": env("LOG_LEVEL", default="INFO")},
+    "loggers": {"django": {"handlers": ["console"], "level": "WARNING", "propagate": False}},
+}
+
 # Адреса своих прокси (nginx на этом же сервере): им доверяем заголовок X-Real-IP
 TRUSTED_PROXIES = env.list("TRUSTED_PROXIES", default=["127.0.0.1", "::1"])
 # Общий секрет с витриной Next.js: её серверные запросы не ограничиваются. Пусто — лимит для всех.
