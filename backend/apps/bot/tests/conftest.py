@@ -16,21 +16,37 @@ def bot(settings):
     settings.MANAGER_CHAT_IDS = ["-100"]
 
 
+class FakeTelegram:
+    """Bot API без сети: getUpdates отдаёт подготовленные обновления, sendMessage — номер сообщения."""
+
+    def __init__(self):
+        self.calls: list[tuple[str, dict]] = []
+        self.updates: list[dict] = []
+
+    def __call__(self, method, payload, **kwargs):
+        self.calls.append((method, payload))
+        if method == "getUpdates":
+            updates, self.updates = self.updates, []
+            return updates
+        if method == "sendMessage":
+            return {"message_id": len(self.calls)}
+        return True
+
+    def sent(self, chat_id=None) -> list[str]:
+        return [
+            payload["text"] for method, payload in self.calls
+            if method == "sendMessage" and (chat_id is None or payload["chat_id"] == chat_id)
+        ]
+
+    def last(self, method: str) -> dict:
+        return [payload for name, payload in self.calls if name == method][-1]
+
+
 @pytest.fixture
 def telegram(monkeypatch):
-    """Подменяет Bot API: вызовы записываются, sendMessage отвечает номером сообщения."""
-    calls: list[tuple[str, dict]] = []
-
-    def call(method, payload, **kwargs):
-        calls.append((method, payload))
-        return {"message_id": len(calls)} if method == "sendMessage" else True
-
-    monkeypatch.setattr("apps.notifications.telegram.call", call)
-    return calls
-
-
-def sent(calls, chat_id=None) -> list[str]:
-    return [p["text"] for m, p in calls if m == "sendMessage" and (chat_id is None or p["chat_id"] == chat_id)]
+    fake = FakeTelegram()
+    monkeypatch.setattr("apps.notifications.telegram.call", fake)
+    return fake
 
 
 @pytest.fixture
@@ -40,3 +56,7 @@ def customer(db):
 
 def start_payload(url: str) -> str:
     return url.split("?start=", 1)[1]
+
+
+def message(chat_id: int, text: str, update_id: int = 1) -> dict:
+    return {"update_id": update_id, "message": {"message_id": 10, "chat": {"id": chat_id, "type": "private"}, "text": text}}

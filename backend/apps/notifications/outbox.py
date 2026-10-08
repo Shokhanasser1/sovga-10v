@@ -1,6 +1,6 @@
 """Outbox: надёжная доставка событий («новый заказ», «отправить в Telegram»).
 
-emit() вызывается внутри транзакции изменения данных; deliver_pending() — из run_jobs.
+emit() вызывается внутри транзакции изменения данных; deliver_pending() — из run_jobs и run_bot.
 Обработчики регистрируются приложениями в AppConfig.ready() через @register.
 """
 
@@ -25,6 +25,8 @@ BACKOFF = [
     timedelta(hours=3),
     timedelta(hours=6),
 ]
+# Событие в работе у одного процесса; если он упал посреди отправки, через это время событие возьмёт другой.
+CLAIM_LEASE = timedelta(minutes=5)
 _HANDLERS: dict[str, Handler] = {}
 SECRET_SETTINGS = (
     "SECRET_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_GATEWAY_TOKEN", "ESKIZ_PASSWORD", "INTERNAL_API_TOKEN",
@@ -76,6 +78,11 @@ def deliver_pending(now: datetime, limit: int = 100) -> DeliveryResult:
     result = DeliveryResult()
     due = OutboxEvent.objects.filter(status=OutboxEvent.Status.PENDING, next_attempt_at__lte=now).order_by("pk")
     for event in due[:limit]:
+        claimed = OutboxEvent.objects.filter(
+            pk=event.pk, status=OutboxEvent.Status.PENDING, next_attempt_at=event.next_attempt_at
+        ).update(next_attempt_at=now + CLAIM_LEASE)
+        if not claimed:  # его уже забрал другой процесс
+            continue
         handler = _HANDLERS.get(event.type)
         if handler is None:
             event.status = OutboxEvent.Status.FAILED

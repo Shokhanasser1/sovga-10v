@@ -154,3 +154,20 @@ def test_telegram_network_error_does_not_expose_the_url():
     with pytest.raises(TelegramError) as exc:
         send_message(1, "x", token="123456:SECRET", http_post=http_post)
     assert "SECRET" not in str(exc.value)
+
+
+def test_event_being_delivered_is_not_taken_by_a_second_worker(handlers):
+    calls = []
+
+    def slow(payload):
+        calls.append(payload["n"])
+        outbox.deliver_pending(NOW)  # второй процесс (run_jobs рядом с run_bot) в это же время
+
+    handlers["slow"] = slow
+    outbox.emit("slow", {"n": 1}, now=NOW)
+    outbox.emit("slow", {"n": 2}, now=NOW)
+
+    outbox.deliver_pending(NOW)
+
+    assert sorted(calls) == [1, 2]
+    assert OutboxEvent.objects.filter(status=OutboxEvent.Status.DONE).count() == 2
