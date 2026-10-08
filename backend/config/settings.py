@@ -96,6 +96,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": env("THROTTLE_ANON", default="120/min"),
         "search": env("THROTTLE_SEARCH", default="60/min"),
+        "otp": env("THROTTLE_OTP", default="10/min"),
     },
 }
 
@@ -103,6 +104,13 @@ REST_FRAMEWORK = {
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS", default=["http://localhost:3000", "http://127.0.0.1:3000"]
 )
+
+# Браузер отправляет cookie сессии в API (вход по коду) — нужны CORS с cookie и доверенные источники CSRF
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=CORS_ALLOWED_ORIGINS)
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
 
 # Адреса своих прокси (nginx на этом же сервере): им доверяем заголовок X-Real-IP
 TRUSTED_PROXIES = env.list("TRUSTED_PROXIES", default=["127.0.0.1", "::1"])

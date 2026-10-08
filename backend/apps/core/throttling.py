@@ -46,3 +46,9 @@ class SearchRateThrottle(ClientRateThrottle):
     """Автокомплит дёргается на каждый набранный символ — отдельный, более строгий лимит."""
 
     scope = "search"
+
+
+class OtpRateThrottle(ClientRateThrottle):
+    """Запрос и проверка кода входа: защита от рассылки SMS по чужим номерам и перебора."""
+
+    scope = "otp"
