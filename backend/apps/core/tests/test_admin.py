@@ -21,6 +21,10 @@ READ_ONLY = [
     "sourcing.supplierfeedrow",
     "sourcing.reservation",
     "pricing.pricesnapshot",
+    "customers.customer",
+    "customers.otpcode",
+    "orders.order",
+    "notifications.outboxevent",
 ]
 
 
