@@ -20,12 +20,16 @@ def send_message(
     http_post: Callable[..., requests.Response] = requests.post,
 ) -> None:
     token = token or settings.TELEGRAM_BOT_TOKEN
-    response = http_post(
-        f"https://api.telegram.org/bot{token}/sendMessage",
-        json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
-        timeout=10,
-    )
-    payload = response.json()
+    try:
+        response = http_post(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            json={"chat_id": chat_id, "text": text, "disable_web_page_preview": True},
+            timeout=10,
+        )
+        payload = response.json()
+    except (requests.RequestException, ValueError) as error:
+        # Текст ошибки requests содержит адрес, а в адресе — токен бота. Наружу — только тип ошибки.
+        raise TelegramError(f"Telegram недоступен: {type(error).__name__}") from None
     if not payload.get("ok"):
         raise TelegramError(payload.get("description", "Telegram отклонил сообщение"))
 

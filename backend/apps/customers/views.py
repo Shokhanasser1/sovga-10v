@@ -15,7 +15,7 @@ from .models import Customer
 from .otp import OtpError, request_code, verify_code
 from .phones import normalize_uz_phone
 from .senders import build_sender
-from .services import customer_for_phone
+from .services import AccountConflict, customer_for_phone
 
 RATE_ERRORS = {"too_soon", "too_many"}
 
@@ -97,7 +97,10 @@ class VerifyView(APIView):
             verify_code(phone, serializer.validated_data["code"], timezone.now())
         except OtpError as error:
             return _otp_error(error)
-        customer = customer_for_phone(phone)
+        try:
+            customer = customer_for_phone(phone)
+        except AccountConflict as error:
+            return Response({"detail": str(error), "code": "conflict"}, status=status.HTTP_409_CONFLICT)
         login(request, customer.user, backend="django.contrib.auth.backends.ModelBackend")
         return Response({"customer": customer_payload(customer)})
 

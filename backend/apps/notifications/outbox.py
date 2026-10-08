@@ -9,6 +9,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.utils import timezone
 
 from .models import OutboxEvent
@@ -25,6 +26,18 @@ BACKOFF = [
     timedelta(hours=6),
 ]
 _HANDLERS: dict[str, Handler] = {}
+SECRET_SETTINGS = (
+    "SECRET_KEY", "TELEGRAM_BOT_TOKEN", "TELEGRAM_GATEWAY_TOKEN", "ESKIZ_PASSWORD", "INTERNAL_API_TOKEN",
+)
+
+
+def _redact(text: str) -> str:
+    """Ошибки внешних сервисов могут содержать токены (например, в адресе Bot API) — вычищаем."""
+    for name in SECRET_SETTINGS:
+        value = getattr(settings, name, "")
+        if value and len(value) >= 6:
+            text = text.replace(value, "***")
+    return text
 
 
 @dataclass
@@ -73,7 +86,7 @@ def deliver_pending(now: datetime, limit: int = 100) -> DeliveryResult:
             try:
                 handler(event.payload)
             except Exception as error:  # внешний сервис упал — запоминаем и повторим позже, очередь не останавливаем
-                _record_failure(event, now, f"{type(error).__name__}: {error}", result)
+                _record_failure(event, now, _redact(f"{type(error).__name__}: {error}"), result)
             else:
                 event.status = OutboxEvent.Status.DONE
                 event.processed_at = now

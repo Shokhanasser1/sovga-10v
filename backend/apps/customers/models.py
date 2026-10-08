@@ -53,3 +53,13 @@ class OtpCode(models.Model):
 
     def __str__(self) -> str:
         return f"{self.phone} {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class OtpPhone(models.Model):
+    """Строка-замок на номер: выдача кодов по одному номеру идёт строго по очереди."""
+
+    phone = models.CharField(max_length=13, primary_key=True)
+    locked_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self) -> str:
+        return self.phone

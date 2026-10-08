@@ -142,5 +142,5 @@ def test_customer_is_created_once_per_phone():
     again = customer_for_phone(PHONE)
 
     assert first == again
-    assert first.user.username == PHONE
+    assert first.user.username == f"customer_{PHONE}"
     assert not first.user.has_usable_password()

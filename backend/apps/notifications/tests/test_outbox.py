@@ -125,3 +125,32 @@ def test_notify_managers_without_bot_does_nothing(settings, monkeypatch):
     monkeypatch.setattr("apps.notifications.telegram.send_message", lambda chat, text: pytest.fail("не должно быть отправки"))
 
     assert notify_managers("Новый заказ") == 0
+
+
+def test_secrets_never_reach_the_error_log(handlers, settings):
+    settings.TELEGRAM_BOT_TOKEN = "123456:SECRET-BOT-TOKEN"
+
+    def leaky(payload):
+        raise ConnectionError("Max retries exceeded with url: /bot123456:SECRET-BOT-TOKEN/sendMessage")
+
+    handlers["ping"] = leaky
+    event = outbox.emit("ping", {}, now=NOW)
+
+    outbox.deliver_pending(NOW)
+
+    event.refresh_from_db()
+    assert "SECRET-BOT-TOKEN" not in event.last_error
+    assert "***" in event.last_error
+
+
+def test_telegram_network_error_does_not_expose_the_url():
+    import requests
+
+    from apps.notifications.telegram import TelegramError
+
+    def http_post(url, **kwargs):
+        raise requests.ConnectionError(f"Max retries exceeded with url: {url}")
+
+    with pytest.raises(TelegramError) as exc:
+        send_message(1, "x", token="123456:SECRET", http_post=http_post)
+    assert "SECRET" not in str(exc.value)
