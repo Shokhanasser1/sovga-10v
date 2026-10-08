@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from apps.notifications.telegram import bot_available
 from apps.payments.links import configured_providers
 
 from .models import Order
@@ -101,6 +102,8 @@ def order_payload(order: Order) -> dict:
         "can_cancel": order.status in CUSTOMER_CANCELLABLE,
         "can_pay": order.status in (Order.Status.CONFIRMED, Order.Status.AWAITING_PAYMENT),
         "pay_providers": configured_providers(),
+        # Статусы в Telegram: уже приходят, можно подключить или бот не настроен.
+        "telegram": "linked" if order.customer.telegram_chat_id else ("available" if bot_available() else "off"),
         "lines": lines,
         "events": events,
     }

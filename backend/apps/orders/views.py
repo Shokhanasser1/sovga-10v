@@ -44,7 +44,7 @@ class OrderListCreateView(APIView):
     permission_classes = [IsCustomer]
 
     def get(self, request):
-        orders = Order.objects.filter(customer__user=request.user).prefetch_related("events")[:50]
+        orders = Order.objects.filter(customer__user=request.user).select_related("customer").prefetch_related("events")[:50]
         return Response([order_payload(order) for order in orders])
 
     def post(self, request):

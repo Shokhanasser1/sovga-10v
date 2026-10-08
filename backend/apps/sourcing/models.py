@@ -38,6 +38,9 @@ class Supplier(models.Model):
     lead_time_days = models.PositiveIntegerField(default=1)
     payment_terms = models.CharField(max_length=200, blank=True)
     contact = models.CharField(max_length=200, blank=True)
+    telegram_chat_id = models.BigIntegerField(
+        null=True, blank=True, help_text="Заполняет бот, когда поставщик открывает ссылку для подключения"
+    )
     is_active = models.BooleanField(default=True)
 
     def __str__(self) -> str:

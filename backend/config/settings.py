@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     "apps.notifications",
     "apps.orders",
     "apps.payments",
+    "apps.bot",
 ]
 
 MIDDLEWARE = [
@@ -141,6 +142,8 @@ if OTP_FIXED_CODE and not DEBUG:
 
 # Telegram-бот: уведомления менеджерам (новый заказ и т. п.). Токен — только из окружения.
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
+# Имя бота без @ — для ссылок t.me/<имя>?start=…
+TELEGRAM_BOT_USERNAME = env("TELEGRAM_BOT_USERNAME", default="")
 MANAGER_CHAT_IDS = env.list("MANAGER_CHAT_IDS", default=[])
 
 # Payme: касса и ключ (тестовый ключ — для test.paycom.uz). Без ключа вызовы Payme отклоняются.

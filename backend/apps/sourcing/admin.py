@@ -1,4 +1,5 @@
 from django.contrib import admin, messages
+from django.utils import timezone
 from django.utils.html import format_html_join
 from django.utils.safestring import mark_safe
 
@@ -26,9 +27,33 @@ class ReadOnlyAdmin(admin.ModelAdmin):
 
 @admin.register(Supplier)
 class SupplierAdmin(admin.ModelAdmin):
-    list_display = ("name", "connector_type", "reliability", "lead_time_days", "is_active")
+    list_display = ("name", "connector_type", "reliability", "lead_time_days", "bot_connected", "is_active")
     list_filter = ("connector_type", "is_active")
     search_fields = ("name",)
+    readonly_fields = ("telegram_chat_id",)
+    actions = ["bot_link_action"]
+
+    @admin.display(description="Бот", boolean=True)
+    def bot_connected(self, obj: Supplier) -> bool:
+        return obj.telegram_chat_id is not None
+
+    @admin.action(description="Ссылка для подключения Telegram-бота", permissions=["change"])
+    def bot_link_action(self, request, queryset):
+        from apps.bot.links import supplier_link
+        from apps.notifications.telegram import bot_available
+
+        if not bot_available():
+            self.message_user(
+                request, "Бот не настроен: нужны TELEGRAM_BOT_TOKEN и TELEGRAM_BOT_USERNAME в backend/.env",
+                messages.WARNING,
+            )
+            return
+        for supplier in queryset:
+            self.message_user(
+                request,
+                f"{supplier}: отправьте поставщику ссылку {supplier_link(supplier, timezone.now())} — "
+                "она действует 24 часа и открывается один раз",
+            )
 
 
 @admin.register(Warehouse)
