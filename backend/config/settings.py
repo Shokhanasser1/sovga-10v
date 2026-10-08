@@ -1,3 +1,4 @@
+import os
 from decimal import Decimal
 from pathlib import Path
 
@@ -8,7 +9,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 env = environ.Env()
 env_file = BASE_DIR / ".env"
-if env_file.exists():
+# Тесты не читают .env: у каждого ученика он свой, а результат тестов не должен от него зависеть
+if env_file.exists() and os.environ.get("DJANGO_READ_ENV_FILE", "1") == "1":
     environ.Env.read_env(env_file)
 
 DEBUG = env.bool("DEBUG", default=False)

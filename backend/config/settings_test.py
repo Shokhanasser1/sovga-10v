@@ -1,5 +1,6 @@
 import os
 
+os.environ["DJANGO_READ_ENV_FILE"] = "0"  # настройки тестов не зависят от локального backend/.env
 os.environ.setdefault("SECRET_KEY", "test-only-not-a-secret")
 # Тестовый клиент ходит с 127.0.0.1 — общий счётчик не должен влиять на остальные тесты.
 # Сами лимиты проверяются в apps/core/tests/test_throttling.py со своими значениями.
