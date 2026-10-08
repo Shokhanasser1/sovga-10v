@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.catalog",
     "apps.sourcing",
+    "apps.inventory",
     "apps.pricing",
     "apps.promo",
 ]
