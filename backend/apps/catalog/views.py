@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.core.throttling import SearchRateThrottle
+
 from .comparison import compare_variants
 from .compatibility import compatible_accessories
 from .filtering import apply_filters, compute_facets, search_and_sort
@@ -95,6 +97,7 @@ class SuggestView(APIView):
     """Автокомплит в шапке: до 8 товаров и 3 категорий."""
 
     permission_classes = [AllowAny]
+    throttle_classes = [SearchRateThrottle]
 
     def get(self, request):
         result = suggest(request.query_params.get("q", ""))

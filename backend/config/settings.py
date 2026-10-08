@@ -88,7 +88,15 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 24,
+    "DEFAULT_THROTTLE_CLASSES": ["apps.core.throttling.ClientRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": env("THROTTLE_ANON", default="120/min"),
+        "search": env("THROTTLE_SEARCH", default="60/min"),
+    },
 }
+
+# Адреса своих прокси (Next.js, nginx на этом же сервере): им доверяем X-Forwarded-For
+TRUSTED_PROXIES = env.list("TRUSTED_PROXIES", default=["127.0.0.1", "::1"])
 
 # Комиссия эквайринга (Payme/Click) в процентах — уменьшает бюджет подарка
 CARD_COMMISSION_PCT = Decimal(env("CARD_COMMISSION_PCT", default="0"))
