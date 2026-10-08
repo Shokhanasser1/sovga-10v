@@ -15,4 +15,5 @@ urlpatterns = [
     ),
     path("compare/", views.CompareView.as_view(), name="compare"),
     path("search/suggest/", views.SuggestView.as_view(), name="search-suggest"),
+    path("facets/", views.FacetsView.as_view(), name="facets"),
 ]

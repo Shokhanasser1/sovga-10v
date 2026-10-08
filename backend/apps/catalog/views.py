@@ -7,6 +7,7 @@ from rest_framework.views import APIView
 
 from .comparison import compare_variants
 from .compatibility import compatible_accessories
+from .filtering import apply_filters, compute_facets, search_and_sort
 from .models import Category, ProductModel, Status, Variant
 from .search import suggest
 from .serializers import (
@@ -17,6 +18,14 @@ from .serializers import (
 )
 
 MAX_COMPARE = 4
+
+
+def _active_in_category(slug: str | None):
+    queryset = ProductModel.objects.filter(status=Status.ACTIVE).select_related("brand", "category")
+    if not slug:
+        return queryset, None
+    category = get_object_or_404(Category, slug=slug)
+    return queryset.filter(category_id__in=category.subtree_ids()), category
 
 
 class CategoryListView(generics.ListAPIView):
@@ -31,16 +40,10 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductListSerializer
 
     def get_queryset(self):
-        queryset = (
-            ProductModel.objects.filter(status=Status.ACTIVE)
-            .select_related("brand", "category")
-            .order_by("name_ru")
-        )
-        slug = self.request.query_params.get("category")
-        if slug:
-            category = get_object_or_404(Category, slug=slug)
-            queryset = queryset.filter(category_id__in=category.subtree_ids())
-        return queryset
+        params = self.request.query_params
+        queryset, category = _active_in_category(params.get("category"))
+        queryset = apply_filters(queryset, params, category)
+        return search_and_sort(queryset, params.get("q", ""), params.get("sort"))
 
 
 class ProductDetailView(generics.RetrieveAPIView):
@@ -101,3 +104,16 @@ class SuggestView(APIView):
                 "categories": CategorySerializer(result["categories"], many=True).data,
             }
         )
+
+
+class FacetsView(APIView):
+    """Фасеты для боковой панели: бренды, атрибуты со счётчиками, диапазон цен."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        queryset, category = _active_in_category(request.query_params.get("category"))
+        query = request.query_params.get("q", "").strip()
+        if query:
+            queryset = search_and_sort(queryset, query, "relevance")
+        return Response(compute_facets(queryset, category))
