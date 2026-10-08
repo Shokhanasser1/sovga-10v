@@ -13,3 +13,9 @@ def test_valid_imeis(imei):
 )
 def test_invalid_imeis(imei):
     assert not is_valid_imei(imei)
+
+
+def test_check_digit_completes_valid_imei():
+    from apps.inventory.imei import with_check_digit
+
+    assert with_check_digit("49015420323751") == "490154203237518"
