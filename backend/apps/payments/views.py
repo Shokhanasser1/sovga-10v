@@ -10,7 +10,7 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 
-from . import payme
+from . import click, payme
 
 
 def _payme_authorized(request) -> bool:
@@ -40,3 +40,21 @@ class PaymeView(View):
         except (json.JSONDecodeError, UnicodeDecodeError):
             return JsonResponse(payme.error_response(None, -32700, "Ошибка разбора JSON", "Parse error"))
         return JsonResponse(payme.handle(body, timezone.now()))
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class ClickView(View):
+    """Click присылает form-urlencoded запрос и ждёт JSON с кодом ошибки протокола."""
+
+    handler = None
+
+    def post(self, request):
+        return JsonResponse(type(self).handler(request.POST.dict(), timezone.now()))
+
+
+class ClickPrepareView(ClickView):
+    handler = staticmethod(click.prepare)
+
+
+class ClickCompleteView(ClickView):
+    handler = staticmethod(click.complete)
