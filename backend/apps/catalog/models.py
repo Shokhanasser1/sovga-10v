@@ -3,6 +3,7 @@ from django.core.validators import RegexValidator
 from django.db import models
 
 from .attributes import AttrSpec, canonical_key, validate_values
+from .rules import validate_rule
 
 
 class Category(models.Model):
@@ -224,3 +225,48 @@ class Variant(models.Model):
                 errors["axes"] = ["Вариант с такими осями уже существует"]
         if errors:
             raise ValidationError(errors)
+
+
+class AccessoryCompat(models.Model):
+    accessory = models.ForeignKey(
+        ProductModel, on_delete=models.CASCADE, related_name="compatible_devices"
+    )
+    device = models.ForeignKey(
+        ProductModel, on_delete=models.CASCADE, related_name="explicit_accessories"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["accessory", "device"], name="unique_accessory_device")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.accessory} → {self.device}"
+
+    def clean(self) -> None:
+        errors = {}
+        if self.accessory_id and not self.accessory.is_accessory:
+            errors["accessory"] = "Это не аксессуар"
+        if self.device_id and self.device.is_accessory:
+            errors["device"] = "Устройство не может быть аксессуаром"
+        if errors:
+            raise ValidationError(errors)
+
+
+class CompatRule(models.Model):
+    accessory = models.ForeignKey(
+        ProductModel, on_delete=models.CASCADE, related_name="compat_rules"
+    )
+    conditions = models.JSONField(
+        help_text='[{"attr": "charge_port", "op": "eq", "value": "usb-c"}, '
+        '{"attr": "max_charge_w", "op": "lte", "accessory_attr": "output_w"}]'
+    )
+    note = models.CharField(max_length=200, blank=True)
+
+    def __str__(self) -> str:
+        return f"Правило для {self.accessory}"
+
+    def clean(self) -> None:
+        errors = validate_rule(self.conditions)
+        if errors:
+            raise ValidationError({"conditions": errors})
