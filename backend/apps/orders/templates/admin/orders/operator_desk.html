@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}{{ block.super }}<meta http-equiv="refresh" content="60">{% endblock %}
+{% block extrastyle %}{{ block.super }}{% include "admin/orders/desk_styles.html" %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> › Рабочее место оператора</div>
+{% endblock %}
+
+{% block content %}
+<p class="desk-muted">Страница обновляется каждую минуту. Сейчас {{ now|date:"H:i" }}.</p>
+{% for section in sections %}
+  <section class="desk-section">
+    <h2>{{ section.title }} <span class="desk-count">{{ section.rows|length }}</span></h2>
+    {% if section.rows %}
+      <table class="desk-table">
+        <thead>
+          <tr><th>Заказ</th><th>Покупатель</th><th>Состав</th><th>Сумма</th><th>Срок</th><th></th></tr>
+        </thead>
+        <tbody>
+          {% for row in section.rows %}
+            <tr>
+              <td>
+                <a href="{% url 'admin:orders_operatordesk_pick' row.order.number %}"><strong>{{ row.order.number }}</strong></a>
+                <div class="desk-muted">{{ row.order.get_status_display }}</div>
+              </td>
+              <td>{{ row.order.customer.phone }}</td>
+              <td>
+                {{ row.summary }}
+                {% for note in row.notes %}<div class="desk-muted">{{ note }}</div>{% endfor %}
+              </td>
+              <td>{{ row.total }}&nbsp;сум</td>
+              <td><span class="desk-timer desk-{{ row.timer_class }}">{{ row.timer }}</span></td>
+              <td>
+                {% if row.action %}
+                  <form method="post" action="{% url 'admin:orders_operatordesk_action' row.order.number row.action.0 %}">
+                    {% csrf_token %}<button type="submit" class="button">{{ row.action.1 }}</button>
+                  </form>
+                {% elif section.key == "picking" %}
+                  <a class="button" href="{% url 'admin:orders_operatordesk_pick' row.order.number %}">Собрать</a>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <p class="desk-muted">Пусто</p>
+    {% endif %}
+  </section>
+{% endfor %}
+{% endblock %}

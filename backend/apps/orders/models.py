@@ -111,3 +111,12 @@ class SupplierRequest(models.Model):
 
     def __str__(self) -> str:
         return f"{self.order} → {self.supplier}"
+
+
+class OperatorDesk(Order):
+    """Пункт меню админки «Рабочее место оператора» — своей таблицы нет."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "рабочее место оператора"
+        verbose_name_plural = "рабочее место оператора"

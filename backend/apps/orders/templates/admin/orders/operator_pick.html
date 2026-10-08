@@ -1,0 +1,136 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/orders/desk_styles.html" %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a> ›
+  <a href="{% url 'admin:orders_operatordesk_changelist' %}">Рабочее место оператора</a> › {{ order.number }}
+</div>
+{% endblock %}
+
+{% block content %}
+<p><strong>{{ order.get_status_display }}</strong> · {{ order.get_payment_method_display }}</p>
+
+<div class="desk-card">
+  <h2>Покупатель и адрес</h2>
+  <p>{{ order.customer.phone }}{% if order.customer.name %} — {{ order.customer.name }}{% endif %}</p>
+  <p>{{ order.address_text }}{% if order.address_landmark %} — {{ order.address_landmark }}{% endif %}</p>
+  {% if order.comment %}<p class="desk-muted">Комментарий: {{ order.comment }}</p>{% endif %}
+</div>
+
+{% if picking %}
+  {% if problems %}
+    <ul class="desk-problems">{% for problem in problems %}<li>{{ problem }}</li>{% endfor %}</ul>
+  {% else %}
+    <p class="desk-ready">Всё собрано — можно передавать в доставку.</p>
+  {% endif %}
+{% endif %}
+
+<div class="desk-card">
+  <h2>Состав</h2>
+  {% for item in lines %}
+    <div style="margin-bottom: 12px">
+      <strong>{{ item.label }}</strong> × {{ item.line.qty }}{% if item.line.is_gift %} <span class="desk-muted">— подарок</span>{% endif %}
+      {% if item.serialized %}
+        <ul class="desk-units">
+          {% for unit in item.units %}
+            <li>
+              <span class="desk-imei">{{ unit.imei1 }}</span>
+              <span class="desk-muted">UzIMEI: {{ unit.get_uzimei_status_display|lower }}</span>
+              {% if picking %}
+                {% if unit.uzimei_status != Z.REGISTERED %}
+                  <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'uzimei' %}">
+                    {% csrf_token %}<input type="hidden" name="unit" value="{{ unit.pk }}"><input type="hidden" name="registered" value="yes">
+                    <button type="submit" class="button">Зарегистрирован в UzIMEI</button>
+                  </form>
+                {% endif %}
+                {% if unit.uzimei_status != Z.NOT_REGISTERED %}
+                  <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'uzimei' %}">
+                    {% csrf_token %}<input type="hidden" name="unit" value="{{ unit.pk }}"><input type="hidden" name="registered" value="no">
+                    <button type="submit" class="button">Не зарегистрирован</button>
+                  </form>
+                {% endif %}
+                <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'remove_unit' %}">
+                  {% csrf_token %}<input type="hidden" name="unit" value="{{ unit.pk }}">
+                  <button type="submit" class="button">Убрать</button>
+                </form>
+              {% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+        {% if picking and item.missing %}
+          <form class="desk-scan" method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'add_unit' %}">
+            {% csrf_token %}<input type="hidden" name="line" value="{{ item.line.pk }}">
+            <input name="imei" inputmode="numeric" maxlength="15" placeholder="IMEI — сканер или вручную"
+                   autocomplete="off" {% if item.line.pk == focus_line %}autofocus{% endif %} required>
+            <label><input type="checkbox" name="uzimei"> проверен в UzIMEI — зарегистрирован</label>
+            <button type="submit" class="button">Добавить</button>
+            <span class="desk-muted">ещё {{ item.missing }}</span>
+          </form>
+        {% endif %}
+      {% endif %}
+    </div>
+  {% endfor %}
+  <p><strong>Итого: {{ total }}&nbsp;сум</strong></p>
+</div>
+
+{% if can_confirm or can_start or handed %}
+  <div class="desk-actions">
+    {% if can_confirm %}
+      <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'confirm' %}">
+        {% csrf_token %}<button type="submit" class="button default">Подтвердить у поставщика</button>
+      </form>
+    {% endif %}
+    {% if can_start %}
+      <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'start' %}">
+        {% csrf_token %}<button type="submit" class="button default">Начать сборку</button>
+      </form>
+    {% endif %}
+    {% if handed %}
+      <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'deliver' %}">
+        {% csrf_token %}<button type="submit" class="button default">Доставлен</button>
+      </form>
+    {% endif %}
+  </div>
+{% endif %}
+
+{% if shipment %}
+  <div class="desk-card">
+    <h2>Доставка</h2>
+    <p>{% if shipment.courier_name %}Курьер {{ shipment.courier_name }}, {{ shipment.courier_phone }}{% else %}{{ shipment.service_name }}, накладная {{ shipment.tracking }}{% endif %}</p>
+    <p class="desk-muted">Передан {{ shipment.handed_at|date:"d.m H:i" }}{% if shipment.delivered_at %}, доставлен {{ shipment.delivered_at|date:"d.m H:i" }}{% endif %}</p>
+  </div>
+{% endif %}
+
+{% if picking %}
+  <div class="desk-card">
+    <h2>Передать в доставку</h2>
+    <form class="desk-ship" method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'ship' %}">
+      {% csrf_token %}
+      <label><span><input type="radio" name="carrier" value="own" checked> Свой курьер</span></label>
+      <label>Имя курьера <input name="courier_name" maxlength="100"></label>
+      <label>Телефон курьера <input name="courier_phone" maxlength="20" placeholder="90 123 45 67"></label>
+      <label><span><input type="radio" name="carrier" value="service"> Служба доставки</span></label>
+      <label>Служба <input name="service_name" maxlength="100" placeholder="BTS, Fargo…"></label>
+      <label>Номер накладной <input name="tracking" maxlength="64"></label>
+      <label>Стоимость доставки для магазина, сум <input name="cost_uzs" inputmode="numeric" maxlength="12"></label>
+      <div><button type="submit" class="button default" {% if problems %}disabled{% endif %}>Передать в доставку</button></div>
+    </form>
+  </div>
+{% endif %}
+
+{% if can_cancel %}
+  <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'cancel' %}"
+        onsubmit="return confirm('Отменить заказ {{ order.number }}?{% if paid %} Деньги покупателю нужно вернуть в кабинете Payme / Click.{% endif %}')">
+    {% csrf_token %}<button type="submit" class="button desk-danger">Отменить заказ</button>
+  </form>
+{% endif %}
+
+<div class="desk-card" style="margin-top: 20px">
+  <h2>История</h2>
+  {% for event in events %}
+    <div>{{ event.created_at|date:"d.m H:i" }} — {{ event.get_status_to_display }}{% if event.note %} <span class="desk-muted">({{ event.note }})</span>{% endif %}</div>
+  {% endfor %}
+</div>
+{% endblock %}
