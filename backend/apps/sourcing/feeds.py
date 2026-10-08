@@ -10,6 +10,8 @@ from decimal import Decimal, InvalidOperation
 from openpyxl import load_workbook
 
 REQUIRED_COLUMNS = ("code", "price", "qty")
+MAX_PRICE_USD = Decimal("1000000")
+MAX_QTY = 1_000_000
 
 
 @dataclass(frozen=True)
@@ -73,9 +75,9 @@ def parse_rows(records: Iterable[Mapping], columns: Mapping) -> list[FeedRow]:
         qty = _to_int(record.get(columns["qty"]))
         if not code:
             error = "нет кода"
-        elif price is None or price <= 0:
+        elif price is None or not 0 < price < MAX_PRICE_USD:
             error = "некорректная цена"
-        elif qty is None:
+        elif qty is None or qty > MAX_QTY:
             error = "некорректный остаток"
         else:
             error = ""

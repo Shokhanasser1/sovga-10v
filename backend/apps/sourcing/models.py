@@ -97,3 +97,53 @@ class Offer(models.Model):
         if self.is_own:
             return True
         return now - self.last_confirmed_at <= self.supplier.effective_ttl
+
+
+class SupplierSkuMap(models.Model):
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="sku_maps")
+    supplier_code = models.CharField(max_length=100)
+    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="supplier_codes")
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["supplier", "supplier_code"], name="unique_supplier_code")
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.supplier}: {self.supplier_code} → {self.variant}"
+
+
+class SupplierFeedRun(models.Model):
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="feed_runs")
+    started_at = models.DateTimeField()
+    rows_total = models.PositiveIntegerField(default=0)
+    rows_matched = models.PositiveIntegerField(default=0)
+    rows_unmatched = models.PositiveIntegerField(default=0)
+    rows_invalid = models.PositiveIntegerField(default=0)
+    error = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-started_at", "-pk"]
+
+    def __str__(self) -> str:
+        return f"{self.supplier} — {self.started_at:%Y-%m-%d %H:%M}"
+
+
+class SupplierFeedRow(models.Model):
+    class Status(models.TextChoices):
+        MATCHED = "matched", "Сопоставлена"
+        UNMATCHED = "unmatched", "Ждёт сопоставления"
+        INVALID = "invalid", "Ошибка в строке"
+
+    run = models.ForeignKey(SupplierFeedRun, on_delete=models.CASCADE, related_name="rows")
+    supplier_code = models.CharField(max_length=100)
+    name = models.CharField(max_length=300, blank=True)
+    price_usd = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    qty = models.PositiveIntegerField(null=True, blank=True)
+    raw = models.JSONField(default=dict)
+    status = models.CharField(max_length=10, choices=Status.choices)
+    error = models.CharField(max_length=200, blank=True)
+    variant = models.ForeignKey(Variant, null=True, blank=True, on_delete=models.SET_NULL)
+
+    def __str__(self) -> str:
+        return f"{self.supplier_code} {self.name}".strip()

@@ -46,7 +46,8 @@ def test_qty_formats(qty, expected):
 @pytest.mark.parametrize(
     "overrides, error",
     [({"code": ""}, "нет кода"), ({"price": "0"}, "некорректная цена"),
-     ({"price": "abc"}, "некорректная цена"), ({"qty": "нет"}, "некорректный остаток")],
+     ({"price": "abc"}, "некорректная цена"), ({"price": "1000000000000"}, "некорректная цена"),
+     ({"qty": "нет"}, "некорректный остаток"), ({"qty": "99999999999"}, "некорректный остаток")],
 )
 def test_row_errors(overrides, error):
     [row] = parse_rows([record(**overrides)], COLUMNS)
