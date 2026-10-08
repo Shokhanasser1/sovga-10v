@@ -7,3 +7,4 @@ db.sqlite3
 .hypothesis/
 staticfiles/
 node_modules/
+e2e/shots/
