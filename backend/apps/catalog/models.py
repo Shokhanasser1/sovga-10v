@@ -34,6 +34,19 @@ class Category(models.Model):
             node = node.parent
         return chain[::-1]
 
+    def subtree_ids(self) -> set[int]:
+        """pk этой категории и всех её потомков."""
+        ids = {self.pk}
+        frontier = [self.pk]
+        while frontier:
+            frontier = list(
+                Category.objects.filter(parent_id__in=frontier)
+                .exclude(pk__in=ids)
+                .values_list("pk", flat=True)
+            )
+            ids.update(frontier)
+        return ids
+
     def effective_attributes(self) -> list["AttributeDefinition"]:
         """Атрибуты с наследованием; дочерняя категория переопределяет родителя по code."""
         by_code: dict[str, AttributeDefinition] = {}
