@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from decimal import ROUND_CEILING
 
 from apps.catalog.models import Status, Variant
 from apps.sourcing.routing import choose_offer
@@ -20,6 +21,11 @@ class RepriceResult:
 
 def current_price(variant: Variant) -> PriceSnapshot | None:
     return variant.price_snapshots.order_by("-computed_at", "-pk").first()
+
+
+def snapshot_cost_uzs(snapshot: PriceSnapshot) -> int:
+    """Себестоимость в сумах по курсу снимка, с округлением вверх (бюджет подарка не завышается)."""
+    return int((snapshot.cost_usd * snapshot.rate).to_integral_value(rounding=ROUND_CEILING))
 
 
 def reprice_variant(variant: Variant, rate: ExchangeRate, now: datetime) -> PriceSnapshot | None:

@@ -121,6 +121,8 @@ INTERNAL_API_TOKEN = env("INTERNAL_API_TOKEN", default="")
 
 # Комиссия эквайринга (Payme/Click) в процентах — уменьшает бюджет подарка
 CARD_COMMISSION_PCT = Decimal(env("CARD_COMMISSION_PCT", default="0"))
+# Комиссия провайдера рассрочки в процентах — бюджет подарка в рассрочку меньше
+INSTALLMENT_COMMISSION_PCT = Decimal(env("INSTALLMENT_COMMISSION_PCT", default="5"))
 
 # Коды входа: Telegram Gateway, запасной канал — SMS через Eskiz
 TELEGRAM_GATEWAY_TOKEN = env("TELEGRAM_GATEWAY_TOKEN", default="")

@@ -1,5 +1,3 @@
-from decimal import ROUND_CEILING, Decimal
-
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -13,7 +11,7 @@ from apps.promo.selection import select_gift_policy
 from apps.sourcing.routing import availability
 
 from .models import PriceSnapshot
-from .repricing import current_price
+from .repricing import current_price, snapshot_cost_uzs
 
 
 def _gift_budget(variant: Variant, snapshot: PriceSnapshot | None, now) -> int:
@@ -22,9 +20,8 @@ def _gift_budget(variant: Variant, snapshot: PriceSnapshot | None, now) -> int:
     policy = select_gift_policy(variant, snapshot.price_uzs, at=now)
     if policy is None:
         return 0
-    cost_uzs = int((snapshot.cost_usd * snapshot.rate).to_integral_value(rounding=ROUND_CEILING))
     return gift_budget_uzs(
-        snapshot.price_uzs, cost_uzs, settings.CARD_COMMISSION_PCT,
+        snapshot.price_uzs, snapshot_cost_uzs(snapshot), settings.CARD_COMMISSION_PCT,
         policy.budget_pct_of_net_margin, policy.budget_cap_uzs,
     )
 
