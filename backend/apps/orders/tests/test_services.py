@@ -255,3 +255,29 @@ def test_order_remembers_the_address_for_next_time(shop, customer):
     }
     create_order(customer, [CartItem(PHONE_SKU, 1)], "card", DeliveryAddress("Ташкент, Юнусабад 4-12", "у школы"), "", NOW)
     assert Address.objects.filter(customer=customer).count() == 2
+
+
+def test_low_margin_alerts_managers(shop, customer):
+    from apps.pricing.models import MarkupRule
+
+    MarkupRule.objects.create(markup_pct=Decimal("10"), min_margin_uzs=2_000_000)
+    Offer.objects.filter(variant=shop["case"]).update(cost_usd=Decimal("5"))
+
+    order = order_for(customer, CartItem(PHONE_SKU, 1, gift_sku="CASE-1"))
+
+    # 14 080 000 − iPhone 1000 $ × 12 800 − чехол-подарок 5 $ × 12 800
+    event = OutboxEvent.objects.get(type="order.low_margin")
+    assert event.payload == {"number": order.number, "margin": 1_216_000, "minimum": 2_000_000}
+
+
+@pytest.mark.parametrize("minimum", [None, 1_000_000])
+def test_normal_margin_is_quiet(shop, customer, minimum):
+    from apps.pricing.models import MarkupRule
+
+    if minimum is not None:
+        MarkupRule.objects.create(markup_pct=Decimal("10"), min_margin_uzs=minimum)
+    Offer.objects.filter(variant=shop["case"]).update(cost_usd=Decimal("5"))
+
+    order_for(customer, CartItem(PHONE_SKU, 1, gift_sku="CASE-1"))
+
+    assert not OutboxEvent.objects.filter(type="order.low_margin").exists()

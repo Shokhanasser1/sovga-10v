@@ -9,6 +9,8 @@ from apps.catalog.models import Variant
 from apps.customers.models import Address, Customer
 from apps.inventory.services import release_order_units
 from apps.notifications.outbox import emit
+from apps.pricing.markup import resolve_markup_rule
+from apps.pricing.models import MarkupRule
 from apps.sourcing.models import Offer, Reservation, Supplier
 from apps.sourcing.reservations import release, reserve
 
@@ -88,6 +90,23 @@ def _ask_suppliers(order: Order, now: datetime) -> None:
         emit("sourcing.requested", {"request": request.pk}, now)
 
 
+def _check_margin(order: Order) -> None:
+    """Маржа заказа после подарков ниже минимальной по правилам наценки — сообщаем менеджерам."""
+    lines = list(order.lines.select_related("variant__product_model__category"))
+    cost = sum(line.cost_usd * line.qty * order.rate for line in lines)
+    margin = int(order.total_uzs - cost)
+    minimum = 0
+    for line in lines:
+        if line.is_gift:
+            continue
+        try:
+            minimum += resolve_markup_rule(line.variant).min_margin_uzs * line.qty
+        except MarkupRule.DoesNotExist:
+            continue
+    if margin < minimum:
+        emit("order.low_margin", {"number": order.number, "margin": margin, "minimum": minimum})
+
+
 @transaction.atomic
 def create_order(
     customer: Customer,
@@ -126,6 +145,7 @@ def create_order(
     OrderEvent.objects.create(
         order=order, status_to=order.status, actor=f"customer:{customer.phone}", note="Заказ оформлен", created_at=now
     )
+    _check_margin(order)
     # Вернувшемуся покупателю оформление подставит последний адрес.
     Address.objects.update_or_create(customer=customer, text=address.text, landmark=address.landmark)
     emit("order.created", _created_payload(order), now)

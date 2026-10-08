@@ -41,3 +41,11 @@ def notify_silent(payload: dict) -> None:
         f"Заказ {payload['number']}: поставщик «{payload['supplier']}» молчит {payload['minutes']} мин — "
         "позвоните ему или подтвердите заказ в админке"
     )
+
+
+@register("order.low_margin")
+def notify_low_margin(payload: dict) -> None:
+    notify_managers(
+        f"Заказ {payload['number']}: маржа {_sum(payload['margin'])} сум — ниже минимума {_sum(payload['minimum'])} сум. "
+        "Проверьте закупку и подарок"
+    )
