@@ -23,6 +23,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "apps.core",
     "apps.catalog",
+    "apps.sourcing",
     "apps.pricing",
     "apps.promo",
 ]

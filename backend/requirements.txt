@@ -3,3 +3,4 @@ djangorestframework>=3.16,<3.17
 django-environ>=0.13,<0.14
 psycopg2-binary>=2.9.11,<2.10
 requests>=2.32,<3
+openpyxl>=3.1,<4

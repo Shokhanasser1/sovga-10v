@@ -48,3 +48,30 @@ def make_variant():
         return Variant(product_model=product, sku=sku, axes=axes, **kwargs)
 
     return factory
+
+
+@pytest.fixture
+def variant(iphone, make_variant):
+    variant = make_variant(iphone, "IP16P-256-B", {"storage_gb": 256, "color": "black"},
+                           status=Status.ACTIVE)
+    variant.save()
+    return variant
+
+
+@pytest.fixture
+def make_supplier(db):
+    from apps.sourcing.models import Supplier
+
+    def factory(name="Поставщик", **kwargs):
+        kwargs.setdefault("connector_type", Supplier.Connector.SHEET)
+        kwargs.setdefault("columns", {"code": "Артикул", "name": "Наименование", "price": "Цена", "qty": "Остаток"})
+        return Supplier.objects.create(name=name, **kwargs)
+
+    return factory
+
+
+@pytest.fixture
+def warehouse(db):
+    from apps.sourcing.models import Warehouse
+
+    return Warehouse.objects.create(name="Ташкент, основной")
