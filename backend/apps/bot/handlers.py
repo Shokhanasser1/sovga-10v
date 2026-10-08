@@ -1,5 +1,6 @@
 """Обработчики outbox, которые пишут в Telegram от имени бота."""
 
+from django.conf import settings
 from django.utils import timezone
 
 from apps.notifications.outbox import register
@@ -8,6 +9,8 @@ from apps.orders.models import Order, SupplierRequest
 from apps.orders.supplier_requests import OPEN, supplier_lines
 from apps.sourcing.matching import variant_label
 from apps.sourcing.models import SupplierSkuMap
+
+from . import texts
 
 
 def request_text(request: SupplierRequest) -> str:
@@ -46,3 +49,39 @@ def ask_supplier(payload: dict) -> None:
         return
     message_id = send_message(request.supplier.telegram_chat_id, request_text(request), reply_markup=keyboard(request))
     SupplierRequest.objects.filter(pk=request.pk).update(message_id=message_id, sent_at=timezone.now())
+
+
+def _is_quiet(previous: str | None, status: str) -> bool:
+    """Технические шаги оплаты покупателю не пишем: он сам только что был на странице оплаты."""
+    S = Order.Status
+    return status == S.AWAITING_PAYMENT or (status == S.CONFIRMED and previous == S.AWAITING_PAYMENT)
+
+
+def status_text(order: Order, previous: str | None, status: str, note: str) -> str:
+    S = Order.Status
+    language = order.customer.language
+    words = texts.for_language(language)
+    lines = [words["status"].format(number=order.number, status=texts.status_label(language, status))]
+    if status == S.CONFIRMED:
+        lines.append(words["pay_now"])
+    elif status == S.PAID:
+        lines.append(words["paid"])
+    elif status == S.CANCELLED:
+        if previous in (S.AWAITING_PAYMENT, S.PAID, S.PICKING):
+            lines.append(words["refund"])
+        if note and words["reason"]:  # причины записаны по-русски — узбекским покупателям не показываем
+            lines.append(words["reason"].format(note=note))
+    lines.append(f"{settings.SITE_URL.rstrip('/')}/{language}/orders/{order.number}")
+    return "\n".join(lines)
+
+
+@register("order.status")
+def notify_customer(payload: dict) -> None:
+    if _is_quiet(payload.get("from"), payload["to"]) or not settings.TELEGRAM_BOT_TOKEN:
+        return
+    order = Order.objects.select_related("customer").filter(number=payload["number"]).first()
+    if order is None or not order.customer.telegram_chat_id:
+        return
+    send_message(
+        order.customer.telegram_chat_id, status_text(order, payload.get("from"), payload["to"], payload.get("note", ""))
+    )

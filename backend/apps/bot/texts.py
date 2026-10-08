@@ -44,6 +44,11 @@ CUSTOMER = {
         "no_orders": "Заказов пока нет.",
         "orders": "Ваши последние заказы:",
         "order_line": "{number} — {status} — {total} сум",
+        "status": "Заказ {number}: {status}",
+        "pay_now": "Товар в наличии — оплатите в течение 30 минут, пока цена зафиксирована.",
+        "paid": "Спасибо! Оплата получена, собираем заказ.",
+        "refund": "Если оплата уже прошла, деньги вернутся на карту.",
+        "reason": "Причина: {note}",
     },
     "uz": {
         "linked": "Tayyor! Buyurtmalaringiz holati shu yerga keladi.\n/orders — buyurtmalarim, /stop — yubormaslik.",
@@ -51,6 +56,11 @@ CUSTOMER = {
         "no_orders": "Hozircha buyurtmalar yoʻq.",
         "orders": "Soʻnggi buyurtmalaringiz:",
         "order_line": "{number} — {status} — {total} soʻm",
+        "status": "{number}-buyurtma: {status}",
+        "pay_now": "Mahsulot bor — narx qotirilgan 30 daqiqa ichida toʻlang.",
+        "paid": "Rahmat! Toʻlov qabul qilindi, buyurtmani yigʻyapmiz.",
+        "refund": "Agar toʻlov oʻtgan boʻlsa, pul kartangizga qaytariladi.",
+        "reason": "",
     },
 }
 

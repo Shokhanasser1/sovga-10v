@@ -151,6 +151,7 @@ def transition(
     OrderEvent.objects.create(
         order=locked, status_from=previous, status_to=target, actor=actor, note=note, created_at=now
     )
+    emit("order.status", {"number": locked.number, "from": previous, "to": target, "note": note}, now)
     if target == S.CANCELLED:
         for reservation in Reservation.objects.filter(ref=locked.number, released_at__isnull=True):
             release(reservation, now)
