@@ -1,0 +1,4 @@
+# Серверные конфиги (cron, systemd, nginx) — только LF: с CRLF они ломаются на Linux
+deploy/** text eol=lf
+# Скрипты Windows — CRLF
+*.cmd text eol=crlf
