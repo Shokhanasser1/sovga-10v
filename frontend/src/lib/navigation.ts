@@ -14,3 +14,10 @@ export function formatDateTime(iso: string, lang: Locale): string {
     timeZone: "Asia/Tashkent",
   }).format(new Date(iso));
 }
+
+/** Дата без времени («2027-10-08»): форматируем как есть, без сдвига часового пояса. */
+export function formatDate(isoDate: string, lang: Locale): string {
+  return new Intl.DateTimeFormat(lang === "uz" ? "uz-UZ" : "ru-RU", { dateStyle: "medium", timeZone: "UTC" }).format(
+    new Date(`${isoDate}T00:00:00Z`),
+  );
+}

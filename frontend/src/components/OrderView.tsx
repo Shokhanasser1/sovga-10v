@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { ApiClientError, cancelOrder, fetchOrder, payLink, telegramLink } from "@/lib/api-client";
 import { formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
-import { formatDateTime } from "@/lib/navigation";
+import { formatDate, formatDateTime } from "@/lib/navigation";
 import type { Order } from "@/lib/schemas";
 
 import forms from "./Forms.module.css";
@@ -110,6 +110,11 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
                 <Link href={`/${lang}/product/${line.slug}`}>{withVariant(localized(line, lang), line.axes, lang)}</Link> ×{" "}
                 {line.qty}
                 {line.is_gift && <span className={styles.giftBadge}>{dict.giftLabel}</span>}
+                {line.devices.map((device) => (
+                  <span key={device.imei} className={styles.device}>
+                    {dict.warranty(device.imei, formatDate(device.warranty_until, lang))}
+                  </span>
+                ))}
               </span>
               <span className="price">{line.is_gift ? dict.free : formatSum(line.price_uzs * line.qty, lang)}</span>
             </div>

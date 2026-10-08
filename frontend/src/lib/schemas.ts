@@ -190,6 +190,7 @@ export const orderSchema = z.object({
       price_uzs: z.number(),
       is_gift: z.boolean(),
       axes: attrMap.default({}),
+      devices: z.array(z.object({ imei: z.string(), warranty_until: z.string() })).default([]),
     }),
   ),
   events: z.array(z.object({ status: orderStatusSchema, note: z.string(), at: z.string() })),

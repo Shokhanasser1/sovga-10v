@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { apiUrl } from "./api-client";
 import { COMPARE_KEY, addToCompare, readCompare, removeFromCompare, type CompareItem } from "./compare-store";
 import { deliveryText, formatPriceFrom, formatSum, formatValue } from "./format";
+import { formatDate } from "./navigation";
 import { getDictionary, isLocale, localized, pluralRu, switchLocalePath } from "./i18n";
 
 const NBSP = " ";
@@ -124,5 +125,13 @@ describe("apiUrl", () => {
 
   it("uses a relative URL when the base is empty (production behind nginx)", () => {
     expect(apiUrl("/api/v1/pricing/products/x/", undefined, "")).toBe("/api/v1/pricing/products/x/");
+  });
+});
+
+describe("formatDate", () => {
+  it("keeps the calendar day in any time zone", () => {
+    expect(formatDate("2027-10-08", "ru")).toContain("8");
+    expect(formatDate("2027-10-08", "ru")).toContain("2027");
+    expect(formatDate("2027-01-01", "ru")).not.toContain("2026");
   });
 });
