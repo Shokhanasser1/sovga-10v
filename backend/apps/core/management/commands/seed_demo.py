@@ -226,14 +226,15 @@ class Command(BaseCommand):
     def _pricing_rules(self, categories, now) -> None:
         if not ExchangeRate.objects.exists():
             ExchangeRate.objects.create(date=timezone.localdate(), cbu_rate=Decimal("11800"))
-        MarkupRule.objects.get_or_create(
+        MarkupRule.objects.update_or_create(
             variant=None, category=None, brand=None, is_active=True,
             defaults={"markup_pct": Decimal("12"), "min_margin_uzs": 300_000, "rounding_step_uzs": 10_000},
         )
+        # Аксессуары недорогие, чтобы чехлы помещались в бюджет подарка к смартфону (до 150 000 сум).
         for slug in ("cases", "chargers"):
-            MarkupRule.objects.get_or_create(
+            MarkupRule.objects.update_or_create(
                 category=categories[slug], is_active=True,
-                defaults={"markup_pct": Decimal("80"), "min_margin_uzs": 30_000, "rounding_step_uzs": 1000},
+                defaults={"markup_pct": Decimal("25"), "min_margin_uzs": 20_000, "rounding_step_uzs": 1000},
             )
         GiftPolicy.objects.get_or_create(
             name="Смартфоны: подарок до 150 000 сум", category=categories["smartphones"],

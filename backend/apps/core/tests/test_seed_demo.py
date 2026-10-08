@@ -26,6 +26,11 @@ def test_seed_demo_builds_a_sellable_catalog(client):
                 for item in client.get(f"/api/v1/pricing/products/{slug}/").json()}
     assert {"in_stock", "on_order"} <= statuses
 
+    quote = client.post(
+        "/api/v1/orders/quote/", {"items": [{"sku": "IP16P-256-BLK", "qty": 1}]}, content_type="application/json"
+    ).json()
+    assert quote["lines"][0]["gift_options"], "к iPhone должен находиться хотя бы один подарок"
+
     accessories = client.get("/api/v1/catalog/products/galaxy-s25-ultra/accessories/").json()["results"]
     assert {"case-galaxy-s25-ultra", "charger-samsung-45w"} <= {a["slug"] for a in accessories}
 

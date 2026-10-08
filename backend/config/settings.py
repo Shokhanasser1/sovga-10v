@@ -98,9 +98,10 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 24,
     "DEFAULT_THROTTLE_CLASSES": ["apps.core.throttling.ClientRateThrottle"],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": env("THROTTLE_ANON", default="120/min"),
-        "search": env("THROTTLE_SEARCH", default="60/min"),
-        "otp": env("THROTTLE_OTP", default="10/min"),
+        # В разработке витрина и браузер приходят с 127.0.0.1 и делят один счётчик — лимиты шире
+        "anon": env("THROTTLE_ANON", default="2000/min" if DEBUG else "120/min"),
+        "search": env("THROTTLE_SEARCH", default="1000/min" if DEBUG else "60/min"),
+        "otp": env("THROTTLE_OTP", default="100/min" if DEBUG else "10/min"),
     },
 }
 
