@@ -17,6 +17,7 @@ export function LoginView({ lang }: { lang: Locale }) {
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [channel, setChannel] = useState("");
+  const [demoCode, setDemoCode] = useState("");
   const [resendAt, setResendAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState("");
@@ -35,6 +36,8 @@ export function LoginView({ lang }: { lang: Locale }) {
     try {
       const sent = await requestCode(phone);
       setChannel(sent.channel);
+      setDemoCode(sent.demo_code ?? "");
+      if (sent.demo_code) setCode(sent.demo_code);
       setResendAt(Date.now() + sent.resend_after * 1000);
       setNow(Date.now());
       setStep("code");
@@ -83,7 +86,7 @@ export function LoginView({ lang }: { lang: Locale }) {
           </form>
         ) : (
           <form onSubmit={confirm}>
-            <p className={styles.success}>{dict.codeSent(channel)}</p>
+            <p className={styles.success}>{demoCode ? dict.demoCode(demoCode) : dict.codeSent(channel)}</p>
             <div className={styles.field}>
               <label htmlFor="code">{dict.code}</label>
               <input id="code" className={styles.code} inputMode="numeric" autoComplete="one-time-code" required

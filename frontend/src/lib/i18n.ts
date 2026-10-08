@@ -91,6 +91,7 @@ const ru = {
   getCode: "Получить код",
   codeSent: (channel: string): string =>
     channel === "telegram" ? "Код отправлен в Telegram" : channel === "sms" ? "Код отправлен по SMS" : "Код отправлен",
+  demoCode: (code: string) => `Учебный режим: SMS не отправляется, ваш код — ${code}. Мы уже подставили его.`,
   code: "Код из сообщения",
   signIn: "Войти",
   resendIn: (seconds: number) => `Новый код — через ${seconds} с`,
@@ -232,6 +233,7 @@ const uz: Dictionary = {
   getCode: "Kod olish",
   codeSent: (channel: string) =>
     channel === "telegram" ? "Kod Telegramga yuborildi" : channel === "sms" ? "Kod SMS orqali yuborildi" : "Kod yuborildi",
+  demoCode: (code: string) => `Oʻquv rejimi: SMS yuborilmaydi, kodingiz — ${code}. Uni allaqachon kiritdik.`,
   code: "Xabardagi kod",
   signIn: "Kirish",
   resendIn: (seconds: number) => `Yangi kod — ${seconds} soniyadan keyin`,

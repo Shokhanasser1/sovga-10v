@@ -14,7 +14,7 @@ from apps.core.throttling import OtpRateThrottle, client_ident
 from .models import Customer
 from .otp import OtpError, request_code, verify_code
 from .phones import normalize_uz_phone
-from .senders import build_sender
+from .senders import DemoSender, build_sender
 from .services import AccountConflict, customer_for_phone
 
 RATE_ERRORS = {"too_soon", "too_many"}
@@ -83,15 +83,19 @@ class RequestCodeView(APIView):
     def post(self, request):
         serializer = PhoneSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        sender = build_sender()
         try:
             otp = request_code(
-                serializer.validated_data["phone"], timezone.now(), build_sender(),
+                serializer.validated_data["phone"], timezone.now(), sender,
                 ip=_ip(request), previous_id=request.session.get(CHALLENGE_KEY),
             )
         except OtpError as error:
             return _otp_error(error)
         request.session[CHALLENGE_KEY] = otp.pk
-        return Response({"sent": True, "channel": otp.channel, "resend_after": 60})
+        payload = {"sent": True, "channel": otp.channel, "resend_after": 60}
+        if isinstance(sender, DemoSender):
+            payload["demo_code"] = sender.last_code  # учебный режим: SMS нет, код — на экране
+        return Response(payload)
 
 
 @method_decorator(csrf_protect, name="dispatch")

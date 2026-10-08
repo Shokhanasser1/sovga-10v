@@ -124,7 +124,13 @@ export const customerSchema = z.object({
   address: z.object({ text: z.string(), landmark: z.string() }).nullable().default(null),
 });
 export const meSchema = z.object({ customer: customerSchema.nullable() });
-export const codeSentSchema = z.object({ sent: z.boolean(), channel: z.string(), resend_after: z.number() });
+export const codeSentSchema = z.object({
+  sent: z.boolean(),
+  channel: z.string(),
+  resend_after: z.number(),
+  // Только в учебном режиме: SMS нет, код показывается на экране
+  demo_code: z.string().regex(/^\d{6}$/).optional(),
+});
 
 const giftOptionSchema = z.object({
   sku: z.string(),

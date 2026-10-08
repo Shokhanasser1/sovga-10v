@@ -89,3 +89,40 @@ def test_resend_too_soon_is_429(browser, sender):
 
     assert response.status_code == 429
     assert response.json()["code"] == "too_soon"
+
+
+@pytest.fixture
+def no_senders(settings):
+    settings.TELEGRAM_GATEWAY_TOKEN = settings.ESKIZ_EMAIL = settings.ESKIZ_PASSWORD = ""
+
+
+def test_learning_mode_shows_the_code_on_screen(browser, settings, no_senders):
+    settings.DEMO_MODE = True
+
+    sent = post(browser, "request-code", {"phone": "90 123 45 67"}).json()
+
+    assert sent["channel"] == "demo" and len(sent["demo_code"]) == 6
+    response = post(browser, "verify", {"phone": "+998901234567", "code": sent["demo_code"]})
+    assert response.status_code == 200
+
+
+def test_code_is_secret_outside_learning_mode(browser, settings, no_senders):
+    settings.DEMO_MODE, settings.DEBUG = False, True
+
+    sent = post(browser, "request-code", {"phone": "90 123 45 67"}).json()
+
+    assert sent["channel"] == "console" and "demo_code" not in sent
+
+
+def test_real_sender_wins_over_learning_mode(browser, settings, sender):
+    settings.DEMO_MODE = True
+
+    assert "demo_code" not in post(browser, "request-code", {"phone": "90 123 45 67"}).json()
+
+
+def test_learning_mode_works_without_debug(settings, no_senders):
+    from apps.customers.senders import DemoSender, build_sender
+
+    settings.DEMO_MODE, settings.DEBUG = True, False
+
+    assert isinstance(build_sender(), DemoSender)

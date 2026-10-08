@@ -118,6 +118,17 @@ class ConsoleSender:
         return "console"
 
 
+class DemoSender:
+    """Учебный режим: код не отправляется, а показывается на странице входа."""
+
+    def __init__(self) -> None:
+        self.last_code = ""
+
+    def send(self, phone: str, code: str) -> str:
+        self.last_code = code
+        return "demo"
+
+
 def build_sender() -> OtpSender:
     senders: list[OtpSender] = []
     if settings.TELEGRAM_GATEWAY_TOKEN:
@@ -130,6 +141,8 @@ def build_sender() -> OtpSender:
         )
     if senders:
         return FallbackSender(senders)
+    if settings.DEMO_MODE:
+        return DemoSender()
     if settings.DEBUG:
         return ConsoleSender()
     raise ImproperlyConfigured(
