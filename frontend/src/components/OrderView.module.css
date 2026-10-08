@@ -1,0 +1,69 @@
+.status {
+  display: inline-block;
+  margin: 0 0 20px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--cobalt-tint);
+  color: var(--cobalt-deep);
+  font-weight: 600;
+}
+
+.status[data-status="paid"],
+.status[data-status="delivered"],
+.status[data-status="completed"] {
+  background: var(--turquoise-tint);
+  color: var(--turquoise-ink);
+}
+
+.status[data-status="cancelled"] {
+  background: var(--glaze);
+  color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.notice {
+  margin-bottom: 20px;
+  padding: 14px 18px;
+  border-radius: var(--radius);
+  background: var(--saffron-tint);
+}
+
+.notice p {
+  margin: 0;
+}
+
+.notice p + p {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+.giftBadge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--saffron-tint);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.timeline {
+  margin: 0;
+  list-style: none;
+}
+
+.timeline li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0 14px 18px;
+  border-left: 2px solid var(--line);
+}
+
+.timeline li:last-child {
+  border-left-color: var(--cobalt);
+}
+
+.timeline span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}

@@ -114,3 +114,76 @@ export type VariantOffer = z.infer<typeof variantOfferSchema>;
 export type Suggestions = z.infer<typeof suggestSchema>;
 export type ComparisonRow = z.infer<typeof comparisonRowSchema>;
 export type Page<T> = { count: number; next: string | null; previous: string | null; results: T[] };
+
+// --- Вход, корзина, заказы ---
+
+export const customerSchema = z.object({ phone: z.string(), name: z.string(), language: z.string() });
+export const meSchema = z.object({ customer: customerSchema.nullable() });
+export const codeSentSchema = z.object({ sent: z.boolean(), channel: z.string(), resend_after: z.number() });
+
+const giftOptionSchema = z.object({
+  sku: z.string(),
+  name_ru: z.string(),
+  name_uz: z.string(),
+  price_uzs: z.number(),
+});
+
+export const quoteSchema = z.object({
+  lines: z.array(
+    z.object({
+      sku: z.string(),
+      slug: z.string().nullable(),
+      name_ru: z.string().nullable(),
+      name_uz: z.string().nullable(),
+      qty: z.number(),
+      unit_price_uzs: z.number().nullable(),
+      line_total_uzs: z.number(),
+      availability: z.string(),
+      gift_budget_uzs: z.number(),
+      gift_options: z.array(giftOptionSchema),
+      gift: giftOptionSchema.nullable(),
+      errors: z.array(z.string()),
+    }),
+  ),
+  total_uzs: z.number(),
+  errors: z.array(z.string()),
+  can_order: z.boolean(),
+});
+
+export const ORDER_STATUSES = [
+  "sourcing", "confirmed", "awaiting_payment", "paid", "installment_pending", "signed", "cod", "picking",
+  "handed_to_carrier", "delivered", "completed", "cancelled", "return_requested", "inspected", "refunded",
+] as const;
+export const orderStatusSchema = z.enum(ORDER_STATUSES);
+
+export const orderSchema = z.object({
+  number: z.string(),
+  status: orderStatusSchema,
+  payment_method: z.string(),
+  total_uzs: z.number(),
+  price_lock_until: z.string(),
+  created_at: z.string(),
+  address_text: z.string(),
+  address_landmark: z.string(),
+  comment: z.string(),
+  can_cancel: z.boolean(),
+  lines: z.array(
+    z.object({
+      sku: z.string(),
+      slug: z.string(),
+      name_ru: z.string(),
+      name_uz: z.string(),
+      qty: z.number(),
+      price_uzs: z.number(),
+      is_gift: z.boolean(),
+    }),
+  ),
+  events: z.array(z.object({ status: orderStatusSchema, note: z.string(), at: z.string() })),
+});
+
+export type Customer = z.infer<typeof customerSchema>;
+export type Quote = z.infer<typeof quoteSchema>;
+export type QuoteLine = Quote["lines"][number];
+export type GiftOption = z.infer<typeof giftOptionSchema>;
+export type Order = z.infer<typeof orderSchema>;
+export type OrderStatus = z.infer<typeof orderStatusSchema>;

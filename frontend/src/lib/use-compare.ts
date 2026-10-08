@@ -2,18 +2,20 @@
 
 import { useMemo, useSyncExternalStore } from "react";
 
-import { COMPARE_KEY, parseCompare, subscribeCompare, type CompareItem } from "./compare-store";
+import { cartList, type CartItem } from "./cart-store";
+import { compareList, type CompareItem } from "./compare-store";
 
-function snapshot(): string {
-  try {
-    return window.localStorage.getItem(COMPARE_KEY) ?? "";
-  } catch {
-    return "";
-  }
+function useLocalList<T>(list: { snapshot: () => string; subscribe: (cb: () => void) => () => void; parse: (raw: string | null) => T[] }): T[] {
+  const raw = useSyncExternalStore(list.subscribe, list.snapshot, () => "");
+  return useMemo(() => list.parse(raw), [list, raw]);
 }
 
 /** Текущий список сравнения; обновляется при изменении в этой и других вкладках. */
 export function useCompare(): CompareItem[] {
-  const raw = useSyncExternalStore(subscribeCompare, snapshot, () => "");
-  return useMemo(() => parseCompare(raw), [raw]);
+  return useLocalList(compareList);
+}
+
+/** Текущая корзина; обновляется при изменении в этой и других вкладках. */
+export function useCart(): CartItem[] {
+  return useLocalList(cartList);
 }

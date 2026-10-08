@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { fetchOffers } from "@/lib/api-client";
+import { addToCart } from "@/lib/cart-store";
 import { addToCompare, removeFromCompare } from "@/lib/compare-store";
 import { deliveryText, formatSum, formatValue } from "@/lib/format";
 import { SWATCHES, getDictionary, localized, type Locale } from "@/lib/i18n";
@@ -31,6 +33,8 @@ export function ProductPurchase({ product, lang }: { product: ProductDetail; lan
   const [offersFailed, setOffersFailed] = useState(false);
   const picked = useRef(false);
   const compare = useCompare();
+  const router = useRouter();
+  const [cartFull, setCartFull] = useState(false);
 
   useEffect(() => {
     fetchOffers(product.slug)
@@ -53,6 +57,18 @@ export function ProductPurchase({ product, lang }: { product: ProductDetail; lan
   const offer = offers?.[variant.sku];
   const color = typeof variant.axes.color === "string" ? SWATCHES[variant.axes.color] : undefined;
   const inCompare = compare.some((item) => item.sku === variant.sku);
+
+  function buy() {
+    const added = addToCart({
+      sku: variant.sku,
+      slug: product.slug,
+      name_ru: product.name_ru,
+      name_uz: product.name_uz,
+      variantLabel: variantLabel(variant, axes, lang),
+    });
+    if (added) router.push(`/${lang}/cart`);
+    else setCartFull(true);
+  }
 
   function toggleCompare() {
     if (inCompare) {
@@ -132,16 +148,23 @@ export function ProductPurchase({ product, lang }: { product: ProductDetail; lan
           <p className={styles.delivery}>{dict.freeDelivery}</p>
 
           <div className={styles.actions}>
-            <button className="button" type="button" disabled aria-describedby="buy-soon">
+            <button
+              className="button"
+              type="button"
+              disabled={!offer?.price_uzs || offer.availability.status === "out_of_stock"}
+              onClick={buy}
+            >
               {dict.buy}
             </button>
             <button className="button button-ghost" type="button" aria-pressed={inCompare} onClick={toggleCompare}>
               {inCompare ? dict.inCompare : dict.addToCompare}
             </button>
           </div>
-          <p id="buy-soon" className={styles.note}>
-            {dict.buySoon}
-          </p>
+          {cartFull && (
+            <p className={styles.note} role="alert">
+              {dict.cartFull}
+            </p>
+          )}
         </div>
       </div>
 

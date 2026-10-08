@@ -1,0 +1,191 @@
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 32px;
+  align-items: start;
+}
+
+.title {
+  margin: 32px 0 20px;
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+}
+
+.lines {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.line {
+  padding: 18px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.lineHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.lineHead p {
+  margin: 0;
+}
+
+.name {
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.name:hover {
+  color: var(--cobalt);
+}
+
+.variant {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+
+.stepper button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.stepper button:disabled {
+  color: var(--line);
+  cursor: default;
+}
+
+.stepper span {
+  min-width: 24px;
+  text-align: center;
+  font-weight: 600;
+}
+
+.remove {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.error {
+  margin: 10px 0 0;
+  color: var(--danger);
+  font-weight: 500;
+}
+
+/* Подарок — шафран и лента-икат, как на карточке товара. */
+.gift {
+  position: relative;
+  margin: 14px 0 0;
+  padding: 0 16px 12px;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: var(--saffron-tint);
+}
+
+.giftRibbon {
+  display: block;
+  width: calc(100% + 32px);
+  height: 14px;
+  margin: 0 -16px 10px;
+}
+
+.giftLegend {
+  float: left;
+  width: 100%;
+  margin-bottom: 6px;
+  padding: 0;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.giftOption {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 0;
+  clear: both;
+  cursor: pointer;
+}
+
+.giftOption input {
+  accent-color: var(--cobalt);
+}
+
+.giftPrice {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: line-through;
+}
+
+.summary {
+  position: sticky;
+  top: 96px;
+  margin-top: 100px;
+  padding: 22px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.summary .button {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.totalLabel {
+  margin: 0;
+  color: var(--muted);
+}
+
+.total {
+  margin: 4px 0 0;
+  font-size: 1.6rem;
+}
+
+.delivery {
+  margin: 6px 0 0;
+  color: var(--turquoise-ink);
+  font-weight: 500;
+}
+
+@media (max-width: 860px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .summary {
+    position: static;
+    margin-top: 0;
+  }
+}
