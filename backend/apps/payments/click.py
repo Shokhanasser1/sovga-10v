@@ -44,6 +44,7 @@ def _signed(params: dict, prepare_id: str = "") -> bool:
         f"{params['click_trans_id']}{params['service_id']}{secret}{params['merchant_trans_id']}"
         f"{prepare_id}{params['amount']}{params['action']}{params['sign_time']}"
     )
+    # nosemgrep: python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5
     expected = hashlib.md5(raw.encode()).hexdigest()  # noqa: S324 — алгоритм задан протоколом Click
     return hmac.compare_digest(expected, str(params["sign_string"]))
 

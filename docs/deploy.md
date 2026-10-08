@@ -109,11 +109,11 @@ HSTS включён на 30 дней (`SECURE_HSTS_SECONDS`). Поддомены
 ## 9. Фоновые задачи и копии базы
 
 ```bash
-sudo mkdir -p /var/backups/sovga && sudo chown postgres /var/backups/sovga
+sudo install -d -m 700 -o postgres -g postgres /var/backups/sovga   # копии с данными покупателей — только для postgres
 sudo cp /srv/sovga/deploy/cron/sovga /etc/cron.d/sovga
 ```
 
-Логи задач: `journalctl -t sovga-jobs`. Восстановить копию: `sudo -u postgres pg_restore --clean -d sovga /var/backups/sovga/sovga-<дата>.dump`. Копии стоит дополнительно уносить с сервера (другой сервер или облако).
+Логи задач: `journalctl -t sovga-jobs`. Восстановить копию: `sudo -u postgres pg_restore --clean -d sovga /var/backups/sovga/sovga-<дата>.dump`. Копии стоит дополнительно уносить с сервера (другой сервер или облако) — в зашифрованном виде.
 
 ## 10. Кабинеты платёжных систем
 
