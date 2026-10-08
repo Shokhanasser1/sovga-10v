@@ -4,6 +4,7 @@ from django.db import models
 
 from .attributes import AttrSpec, canonical_key, validate_values
 from .rules import validate_rule
+from .search_text import normalize
 
 
 class Category(models.Model):
@@ -283,3 +284,22 @@ class CompatRule(models.Model):
         errors = validate_rule(self.conditions)
         if errors:
             raise ValidationError({"conditions": errors})
+
+
+class SearchSynonym(models.Model):
+    term = models.CharField(
+        max_length=100, unique=True, help_text="Как пишут покупатели: «айфон», «aypon»"
+    )
+    replacement = models.CharField(max_length=100, help_text="Как в каталоге: «iphone»")
+
+    def __str__(self) -> str:
+        return f"{self.term} → {self.replacement}"
+
+    def clean(self) -> None:
+        if not normalize(self.term) or not normalize(self.replacement):
+            raise ValidationError("Нужны буквы или цифры")
+
+    def save(self, *args, **kwargs) -> None:
+        self.term = normalize(self.term)
+        self.replacement = normalize(self.replacement)
+        super().save(*args, **kwargs)
