@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 
+from .attributes import AttrSpec
+
 
 class Category(models.Model):
     parent = models.ForeignKey(
@@ -90,6 +92,14 @@ class AttributeDefinition(models.Model):
 
     def __str__(self) -> str:
         return f"{self.category} / {self.code}"
+
+    def as_spec(self) -> AttrSpec:
+        return AttrSpec(
+            code=self.code,
+            type=self.type,
+            enum_values=tuple(self.enum_values or ()),
+            is_required=self.is_required or self.is_variant_axis,
+        )
 
     def clean(self) -> None:
         errors = {}
