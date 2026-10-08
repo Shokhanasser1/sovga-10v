@@ -25,6 +25,7 @@ READ_ONLY = [
     "customers.otpcode",
     "orders.order",
     "notifications.outboxevent",
+    "payments.payment",
 ]
 
 

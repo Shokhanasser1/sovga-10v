@@ -1,6 +1,8 @@
 from django.contrib import admin, messages
 from django.utils import timezone
 
+from apps.payments.admin import PaymentInline
+
 from .models import Order, OrderEvent, OrderLine
 from .services import OrderError, cancel_order, confirm_sourcing
 
@@ -35,7 +37,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ("number", "customer", "status", "total_uzs", "created_at", "sla_deadline")
     list_filter = ("status", "payment_method")
     search_fields = ("number", "customer__phone")
-    inlines = [OrderLineInline, OrderEventInline]
+    inlines = [OrderLineInline, PaymentInline, OrderEventInline]
     actions = ["confirm_sourcing_action", "cancel_action"]
 
     def get_readonly_fields(self, request, obj=None):
