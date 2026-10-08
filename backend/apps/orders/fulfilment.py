@@ -7,17 +7,18 @@ from dataclasses import asdict
 from datetime import datetime
 
 from django.db import transaction
-from django.db.models import F, Q, Value
+from django.db.models import Count, F, Q, QuerySet, Value
 from django.db.models.functions import Greatest
 
 from apps.delivery.carriers import CARRIERS, Handover, HandoverError
 from apps.delivery.models import Shipment
 
 from apps.inventory.imei import is_valid_imei
+from apps.notifications.outbox import emit
 from apps.inventory.models import InventoryUnit
 from apps.inventory.services import release_unit, sync_own_offer
 from apps.sourcing.matching import variant_label
-from apps.sourcing.models import Offer, Reservation, Warehouse
+from apps.sourcing.models import Offer, Reservation, Supplier, Warehouse
 from apps.sourcing.reservations import release
 
 from .models import Order, OrderLine
@@ -29,11 +30,14 @@ Z = InventoryUnit.UzimeiStatus
 PICKABLE = {S.PAID, S.SIGNED, S.COD}
 
 
+@transaction.atomic
 def start_picking(order: Order, now: datetime, actor: str) -> Order:
-    return transition(
+    picking = transition(
         order, S.PICKING, now, actor, note="Сборка начата",
         allowed_from=PICKABLE, denied_message="Собирать можно только оплаченный заказ",
     )
+    emit("fulfilment.started", {"number": picking.number}, now)  # поставщикам — прислать IMEI
+    return picking
 
 
 def _lock_picking(order_id: int) -> Order:
@@ -173,3 +177,34 @@ def deliver(order: Order, now: datetime, actor: str) -> Order:
     )
     Shipment.objects.filter(order=delivered).update(delivered_at=now)
     return delivered
+
+
+def waiting_for_supplier_imei(chat_id: int, number: str = "") -> QuerySet[OrderLine]:
+    """Строки собираемых заказов, где поставщик из этого чата ещё не прислал все IMEI. Старые — первыми."""
+    lines = (
+        OrderLine.objects.filter(
+            order__status=S.PICKING, offer__supplier__telegram_chat_id=chat_id,
+            variant__product_model__category__is_serialized=True,
+        )
+        .annotate(bound=Count("units"))
+        .filter(bound__lt=F("qty"))
+        .select_related("order", "offer", "variant__product_model__category")
+        .order_by("order__created_at", "pk")
+    )
+    return lines.filter(order__number=number) if number else lines
+
+
+def add_supplier_unit(chat_id: int, imei: str, number: str, now: datetime) -> str | None:
+    """IMEI, присланный поставщиком в бот. None — чат не поставщика: сообщение не нам."""
+    if not Supplier.objects.filter(telegram_chat_id=chat_id).exists():
+        return None
+    line = waiting_for_supplier_imei(chat_id, number).first()
+    if line is None:
+        return f"По заказу {number} IMEI сейчас не нужен" if number else "Сейчас ни по одному заказу IMEI не нужен — спасибо!"
+    try:
+        add_unit(line, imei, now, actor=f"supplier:{line.offer.supplier_id}")
+    except OrderError as error:
+        return error.message
+    left = sum(item.qty - item.bound for item in waiting_for_supplier_imei(chat_id, line.order.number))
+    done = f"ещё нужно {left} IMEI по этому заказу" if left else "по этому заказу всё, спасибо!"
+    return f"Записали IMEI {imei}: заказ {line.order.number}, {variant_label(line.variant)} — {done}"

@@ -1,15 +1,20 @@
 """Входящие обновления Telegram: команды покупателей, кнопки и цены поставщиков, /id для менеджеров."""
 
+import re
 from datetime import datetime
 
 from apps.customers.models import Customer
 from apps.notifications import telegram
 from apps.notifications.telegram import send_message
+from apps.orders.fulfilment import add_supplier_unit
 from apps.orders.supplier_requests import RequestError, answer_request, offer_price
 
 from . import texts
 from .links import redeem
 from .models import TelegramLink
+
+# IMEI от поставщика: «356938035643809» или «SG000013 356938035643809» (пробелы не важны).
+IMEI_MESSAGE = re.compile(r"^(SG\d{6})?(\d{15})$", re.ASCII)
 
 
 def handle_update(update: dict, now: datetime) -> None:
@@ -53,6 +58,8 @@ def on_message(chat_id: int, text: str, now: datetime) -> None:
         reply = _stop(chat_id)
     elif command == "/id":
         reply = texts.CHAT_ID.format(chat_id=chat_id)
+    elif match := IMEI_MESSAGE.match(text.replace(" ", "").upper()):
+        reply = add_supplier_unit(chat_id, match.group(2), match.group(1) or "", now) or texts.HELP
     else:
         reply = offer_price(chat_id, text, now) or texts.HELP
     send_message(chat_id, reply)

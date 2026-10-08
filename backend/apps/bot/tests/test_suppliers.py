@@ -192,3 +192,65 @@ def test_silent_supplier_is_reported_once(order, telegram):
 
     deliver_pending(sent_at + timedelta(minutes=32))
     assert any("молчит" in text for text in telegram.sent(MANAGERS))
+
+
+@pytest.fixture
+def picking(order, telegram):
+    from apps.orders.fulfilment import start_picking
+    from apps.payments.services import confirm_payment, start_payment
+
+    press(SupplierRequest.objects.get(order=order), "yes")
+    start_payment(order, NOW, actor="payme")
+    confirm_payment(order, NOW, actor="payme", provider="Payme")
+    start_picking(order, NOW, actor="manager:anna")
+    deliver_pending(NOW + timedelta(seconds=1))
+    return order
+
+
+def device(n: int) -> str:
+    from apps.inventory.imei import with_check_digit
+
+    return with_check_digit(f"3569380356{n:04d}")
+
+
+def test_supplier_is_asked_for_imei_when_picking_starts(picking, telegram):
+    text = telegram.sent(SUPPLIER_CHAT)[-1]
+
+    assert picking.number in text and "IMEI" in text and "iPhone 16 Pro" in text
+
+
+def test_supplier_sends_imei(picking, telegram):
+    from apps.inventory.models import InventoryUnit
+
+    say(device(1))
+
+    unit = InventoryUnit.objects.get(imei1=device(1))
+    assert unit.order_line.order == picking and unit.received_for_order
+    reply = telegram.sent(SUPPLIER_CHAT)[-1]
+    assert "Записали" in reply and picking.number in reply and "всё" in reply
+
+    say(device(2))
+    assert "не нужен" in telegram.sent(SUPPLIER_CHAT)[-1]
+
+
+def test_supplier_imei_with_order_number(picking, telegram):
+    say(f"SG999999 {device(1)}")
+    assert "не нужен" in telegram.sent(SUPPLIER_CHAT)[-1]
+
+    say(f"{picking.number} {device(1)}")
+    assert "Записали" in telegram.sent(SUPPLIER_CHAT)[-1]
+
+
+def test_bad_supplier_imei(picking, telegram):
+    say("356938035600009")  # контрольная цифра не сходится
+
+    assert "Неверный IMEI" in telegram.sent(SUPPLIER_CHAT)[-1]
+
+
+def test_imei_from_a_stranger_is_ignored(picking, telegram):
+    from apps.inventory.models import InventoryUnit
+
+    say(device(1), chat_id=999)
+
+    assert not InventoryUnit.objects.exists()
+    assert "/orders" in telegram.sent(999)[-1]

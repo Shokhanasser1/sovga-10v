@@ -91,3 +91,22 @@ def notify_customer(payload: dict) -> None:
     send_message(
         order.customer.telegram_chat_id, status_text(order, payload.get("from"), payload["to"], payload.get("note", ""))
     )
+
+
+@register("fulfilment.started")
+def ask_suppliers_for_imei(payload: dict) -> None:
+    """Заказ собирается — поставщики с поштучным товаром везут устройства и присылают IMEI."""
+    order = Order.objects.filter(number=payload["number"], status=Order.Status.PICKING).first()
+    if order is None:
+        return
+    by_supplier: dict = {}
+    for line in order.lines.select_related("offer__supplier", "variant__product_model__category"):
+        supplier = line.offer.supplier if line.offer else None
+        if supplier and supplier.telegram_chat_id and line.variant.product_model.category.is_serialized:
+            by_supplier.setdefault(supplier, []).append(f"• {variant_label(line.variant)} × {line.qty}")
+    for supplier, lines in by_supplier.items():
+        send_message(supplier.telegram_chat_id, "\n".join([
+            f"Заказ {order.number} оплачен и собирается — привезите, пожалуйста:", *lines,
+            "Пришлите IMEI каждого устройства отдельным сообщением (15 цифр). "
+            f"Если заказов несколько, можно так: {order.number} 356938035643809",
+        ]))
