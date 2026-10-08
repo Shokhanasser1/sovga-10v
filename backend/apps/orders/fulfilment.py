@@ -10,6 +10,7 @@ from django.db import transaction
 from django.db.models import Count, F, Q, QuerySet, Value
 from django.db.models.functions import Greatest
 
+from apps.catalog.labels import variant_title
 from apps.delivery.carriers import CARRIERS, Handover, HandoverError
 from apps.delivery.models import Shipment
 
@@ -17,7 +18,6 @@ from apps.inventory.imei import is_valid_imei
 from apps.notifications.outbox import emit
 from apps.inventory.models import InventoryUnit
 from apps.inventory.services import release_unit, sync_own_offer
-from apps.sourcing.matching import variant_label
 from apps.sourcing.models import Offer, Reservation, Supplier, Warehouse
 from apps.sourcing.reservations import release
 
@@ -76,7 +76,7 @@ def add_unit(line: OrderLine, imei: str, now: datetime, actor: str, uzimei_regis
         if unit is None:
             raise OrderError(f"На складе нет устройства с IMEI {imei} — проверьте скан")
         if unit.variant_id != line.variant_id:
-            raise OrderError(f"Это устройство другой модификации: {variant_label(unit.variant)}")
+            raise OrderError(f"Это устройство другой модификации: {variant_title(unit.variant)}")
         if unit.status != U.IN_STOCK or unit.order_line_id:
             raise OrderError("Это устройство уже продано или собрано в другой заказ")
         unit.status, unit.order_line = U.RESERVED, line
@@ -123,7 +123,7 @@ def picking_problems(order: Order) -> list[str]:
             continue
         units = list(line.units.order_by("pk"))
         if len(units) < line.qty:
-            problems.append(f"{variant_label(line.variant)}: нужно ещё {line.qty - len(units)} IMEI")
+            problems.append(f"{variant_title(line.variant)}: нужно ещё {line.qty - len(units)} IMEI")
         for unit in units:
             if unit.uzimei_status == Z.NOT_REGISTERED:
                 problems.append(f"IMEI {unit.imei1}: не зарегистрирован в UzIMEI — замените устройство")
@@ -207,4 +207,4 @@ def add_supplier_unit(chat_id: int, imei: str, number: str, now: datetime) -> st
         return error.message
     left = sum(item.qty - item.bound for item in waiting_for_supplier_imei(chat_id, line.order.number))
     done = f"ещё нужно {left} IMEI по этому заказу" if left else "по этому заказу всё, спасибо!"
-    return f"Записали IMEI {imei}: заказ {line.order.number}, {variant_label(line.variant)} — {done}"
+    return f"Записали IMEI {imei}: заказ {line.order.number}, {variant_title(line.variant)} — {done}"

@@ -3,12 +3,12 @@
 from django.conf import settings
 from django.utils import timezone
 
+from apps.catalog.labels import variant_title
 from apps.delivery.models import Shipment
 from apps.notifications.outbox import register
 from apps.notifications.telegram import notify_managers, send_message
 from apps.orders.models import Order, SupplierRequest
 from apps.orders.supplier_requests import OPEN, supplier_lines
-from apps.sourcing.matching import variant_label
 from apps.sourcing.models import SupplierSkuMap
 
 from . import texts
@@ -21,7 +21,7 @@ def request_text(request: SupplierRequest) -> str:
     lines = []
     for line in supplier_lines(request):
         code = f" (ваш арт. {codes[line.variant_id]})" if line.variant_id in codes else ""
-        lines.append(f"• {variant_label(line.variant)} × {line.qty} — ${line.cost_usd:.2f}{code}")
+        lines.append(f"• {variant_title(line.variant)} × {line.qty} — ${line.cost_usd:.2f}{code}")
     return "\n".join(
         [f"Заказ {request.order.number} — есть в наличии?", *lines, "Ответьте в течение 2 часов, иначе заказ отменится."]
     )
@@ -103,7 +103,7 @@ def ask_suppliers_for_imei(payload: dict) -> None:
     for line in order.lines.select_related("offer__supplier", "variant__product_model__category"):
         supplier = line.offer.supplier if line.offer else None
         if supplier and supplier.telegram_chat_id and line.variant.product_model.category.is_serialized:
-            by_supplier.setdefault(supplier, []).append(f"• {variant_label(line.variant)} × {line.qty}")
+            by_supplier.setdefault(supplier, []).append(f"• {variant_title(line.variant)} × {line.qty}")
     for supplier, lines in by_supplier.items():
         send_message(supplier.telegram_chat_id, "\n".join([
             f"Заказ {order.number} оплачен и собирается — привезите, пожалуйста:", *lines,

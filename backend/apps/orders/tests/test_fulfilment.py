@@ -160,7 +160,7 @@ def test_removed_supplier_unit_is_forgotten(supplier_order):
 
 def test_picking_problems(order):
     line = phone_line(order)
-    assert picking_problems(order) == ["iPhone 16 Pro 256 black: нужно ещё 2 IMEI"]
+    assert picking_problems(order) == ["iPhone 16 Pro · 256 · Чёрный: нужно ещё 2 IMEI"]
 
     first = add_unit(line, imei(0), NOW, actor="manager:anna", uzimei_registered=True)
     second = add_unit(line, imei(1), NOW, actor="manager:anna")

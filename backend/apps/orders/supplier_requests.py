@@ -7,8 +7,8 @@ from decimal import Decimal
 
 from django.db import transaction
 
+from apps.catalog.labels import variant_title
 from apps.notifications.outbox import emit
-from apps.sourcing.matching import variant_label
 from apps.sourcing.models import Offer
 
 from .models import Order, OrderLine, SupplierRequest
@@ -45,7 +45,7 @@ def supplier_lines(request: SupplierRequest) -> list[OrderLine]:
 
 def lines_payload(request: SupplierRequest) -> list[dict]:
     return [
-        {"name": variant_label(line.variant), "qty": line.qty, "cost": f"{line.cost_usd:.2f}"}
+        {"name": variant_title(line.variant), "qty": line.qty, "cost": f"{line.cost_usd:.2f}"}
         for line in supplier_lines(request)
     ]
 

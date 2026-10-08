@@ -5,9 +5,9 @@ from datetime import datetime, timedelta
 from django.db.models import OuterRef, Subquery
 from django.http import Http404
 
+from apps.catalog.labels import variant_title
 from apps.delivery.carriers import Handover
 from apps.inventory.models import InventoryUnit
-from apps.sourcing.matching import variant_label
 
 from .fulfilment import PICKABLE, add_unit, deliver, mark_uzimei, picking_problems, remove_unit, ship, start_picking
 from .models import Order, OrderEvent, OrderLine
@@ -102,7 +102,7 @@ def pick_context(order: Order) -> dict:
         units = list(line.units.order_by("pk"))
         lines.append({
             "line": line,
-            "label": variant_label(line.variant),
+            "label": variant_title(line.variant),
             "serialized": line.variant.product_model.category.is_serialized,
             "units": units,
             "missing": max(line.qty - len(units), 0),
