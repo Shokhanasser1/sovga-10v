@@ -77,7 +77,9 @@ PRODUCTS = [
      [("IP16P-128-BLK", {"storage_gb": 128, "color": "black", "sim": "nano_esim"}, "950"),
       ("IP16P-256-BLK", {"storage_gb": 256, "color": "black", "sim": "nano_esim"}, "1050"),
       ("IP16P-256-TIT", {"storage_gb": 256, "color": "titanium", "sim": "nano_esim"}, "1060"),
-      ("IP16P-512-TIT", {"storage_gb": 512, "color": "titanium", "sim": "nano_esim"}, "1250")]),
+      ("IP16P-512-TIT", {"storage_gb": 512, "color": "titanium", "sim": "nano_esim"}, "1250"),
+      # Американская версия: Apple продаёт её только с eSIM — на карточке будет предупреждение
+      ("IP16P-256-US", {"storage_gb": 256, "color": "black", "sim": "esim_only"}, "990")]),
     ("iphone-15", "smartphones", "apple", "iPhone 15", "iPhone 15",
      {"ram_gb": 6, "screen_in": 6.1, "chipset": "A16 Bionic", "battery_mah": 3349, "max_charge_w": 20,
       "charge_port": "usb-c", "nfc": True, "weight_g": 171},

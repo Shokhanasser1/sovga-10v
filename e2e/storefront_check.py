@@ -115,6 +115,10 @@ with sync_playwright() as p:
     check(page.get_by_role("button", name="Титан").get_attribute("aria-pressed") == "true",
           "512 ГБ есть только в титане — цвет переключился сам")
     page.get_by_role("button", name="Сравнить").click()
+    check(page.get_by_role("note").count() == 0, "карточка: без предупреждения eSIM у обычной версии")
+    page.get_by_role("button", name="Только eSIM").click()
+    page.wait_for_timeout(300)
+    check("физическую SIM-карту вставить нельзя" in page.get_by_role("note").inner_text(), "карточка: предупреждение «Только eSIM»")
 
     page.goto(f"{BASE}/ru/product/galaxy-s25-ultra")
     page.wait_for_load_state("networkidle")
@@ -217,6 +221,9 @@ with sync_playwright() as p:
     open_cart(buyer)
     buyer.get_by_role("link", name="Оформить заказ").click()
     buyer.wait_for_url("**/ru/checkout", timeout=10000)
+    buyer.wait_for_function("document.querySelector('#address').value !== ''", timeout=10000)
+    check(buyer.get_by_label("Адрес доставки").input_value() == "Ташкент, Юнусабад 4-12, кв. 7",
+          "повторный заказ: адрес подставлен из прошлого")
     place_order(buyer)
     buyer.get_by_role("button", name="Отменить заказ").click()
     buyer.wait_for_selector("text=Отменён", timeout=10000)
