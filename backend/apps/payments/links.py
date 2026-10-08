@@ -24,8 +24,17 @@ def click_configured() -> bool:
     return bool(settings.CLICK_SERVICE_ID and settings.CLICK_MERCHANT_ID and settings.CLICK_SECRET_KEY)
 
 
+def simulated(provider: str) -> bool:
+    """Учебный режим: провайдер без ключей имитируется. Настоящие ключи главнее имитации."""
+    ready = {"payme": payme_configured, "click": click_configured}.get(provider)
+    return bool(settings.DEMO_MODE and ready and not ready())
+
+
 def configured_providers() -> list[str]:
-    return [name for name, ready in (("payme", payme_configured()), ("click", click_configured())) if ready]
+    return [
+        name for name, ready in (("payme", payme_configured()), ("click", click_configured()))
+        if ready or simulated(name)
+    ]
 
 
 def payme_url(order: Order, lang: str) -> str:

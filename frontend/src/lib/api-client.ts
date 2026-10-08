@@ -118,6 +118,10 @@ export function fetchComparison(skus: string[], lang: string): Promise<Compariso
   return request(`/api/v1/catalog/compare/?${query}`, z.array(comparisonRowSchema));
 }
 
+export async function fetchDemo(): Promise<boolean> {
+  return (await request("/api/v1/demo/", z.object({ demo: z.boolean() }))).demo;
+}
+
 export async function fetchMe(): Promise<Customer | null> {
   return (await request("/api/v1/auth/me/", meSchema)).customer;
 }

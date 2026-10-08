@@ -116,6 +116,7 @@ const ru = {
   payWith: (provider: string) => `Оплатить через ${provider}`,
   payRedirect: "Переходим к оплате…",
   telegramConnect: "Получать статусы в Telegram",
+  demoBanner: "Учебный магазин: оплата, SMS и Telegram — имитация, деньги не списываются.",
   esimOnlyWarning:
     "Только eSIM: физическую SIM-карту вставить нельзя. Beeline, Ucell, Mobiuz и Uzmobile выдают eSIM в своих офисах.",
   telegramLinked: "Статусы заказа приходят в Telegram",
@@ -256,6 +257,7 @@ const uz: Dictionary = {
   payWith: (provider: string) => `${provider} orqali toʻlash`,
   payRedirect: "Toʻlovga oʻtyapmiz…",
   telegramConnect: "Holatlarni Telegramda olish",
+  demoBanner: "Oʻquv doʻkoni: toʻlov, SMS va Telegram — taqlid, pul yechilmaydi.",
   esimOnlyWarning:
     "Faqat eSIM: oddiy SIM-kartani qoʻyib boʻlmaydi. Beeline, Ucell, Mobiuz va Uzmobile eSIMni ofislarida beradi.",
   telegramLinked: "Buyurtma holatlari Telegramga keladi",

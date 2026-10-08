@@ -12,6 +12,8 @@ if env_file.exists():
     environ.Env.read_env(env_file)
 
 DEBUG = env.bool("DEBUG", default=False)
+# Учебный режим: всё, что не настроено (оплата, коды входа, Telegram), имитируется. Не для настоящего магазина.
+DEMO_MODE = env.bool("DEMO_MODE", default=False)
 SECRET_KEY = env("SECRET_KEY")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 

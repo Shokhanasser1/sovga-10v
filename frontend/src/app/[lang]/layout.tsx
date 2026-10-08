@@ -3,6 +3,7 @@ import "../globals.css";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import { DemoBanner } from "@/components/DemoBanner";
 import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
 import { LOCALES, isLocale } from "@/lib/i18n";
@@ -25,6 +26,7 @@ export default async function LangLayout({ children, params }: LayoutProps<"/[la
   return (
     <html lang={lang} className={fontClasses}>
       <body>
+        <DemoBanner lang={lang} />
         <SiteHeader lang={lang} />
         <main>{children}</main>
         <SiteFooter lang={lang} />

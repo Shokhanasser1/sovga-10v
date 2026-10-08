@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Учебная оплата — {{ provider_name }}</title>
+  <style>
+    :root { color-scheme: light dark; --ink: #141a2e; --muted: #5b6275; --line: #d9dee8; --bg: #f3f6f9; --card: #fff; --accent: #2340b0; --warn: #fdf3e1; }
+    @media (prefers-color-scheme: dark) { :root { --ink: #eef1f7; --muted: #a3abbd; --line: #313a52; --bg: #10142a; --card: #182040; --accent: #8fa6ff; --warn: #3b3220; } }
+    body { margin: 0; padding: 32px 16px; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, sans-serif; }
+    main { max-width: 460px; margin: 0 auto; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+    h1 { margin: 0 0 4px; font-size: 1.4rem; }
+    .muted { color: var(--muted); }
+    .note { margin: 16px 0; padding: 12px 14px; border-radius: 10px; background: var(--warn); }
+    .sum { font-size: 1.6rem; font-weight: 700; margin: 12px 0; }
+    form { display: inline; }
+    button { margin: 6px 8px 0 0; padding: 10px 18px; border: 1px solid var(--accent); border-radius: 999px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+    button.ghost { background: transparent; color: var(--accent); }
+    a { color: var(--accent); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Учебная оплата · {{ provider_name }}</h1>
+  <p class="muted">Заказ {{ order.number }} · {{ order.get_status_display }}</p>
+  <p class="note">Это имитация, а не {{ provider_name }}: деньги не списываются. Сервер магазина получает те же запросы, что прислал бы настоящий {{ provider_name }}.<br>
+    <span class="muted">Bu taqlid: pul yechilmaydi.</span></p>
+  {% if error %}<p class="note"><strong>{{ error }}</strong></p>{% endif %}
+  <p class="sum">{{ total }} сум</p>
+  {% for action, label in actions %}
+    <form method="post">
+      {% csrf_token %}<input type="hidden" name="action" value="{{ action }}">
+      <button type="submit" {% if action != "pay" %}class="ghost"{% endif %}>{{ label }}</button>
+    </form>
+  {% empty %}
+    <p>Этот заказ сейчас нельзя оплатить.</p>
+  {% endfor %}
+  <p><a href="{{ back }}">← Вернуться к заказу</a></p>
+</main>
+</body>
+</html>

@@ -8,4 +8,5 @@ urlpatterns = [
     path("payme/", views.PaymeView.as_view(), name="payme"),
     path("click/prepare/", views.ClickPrepareView.as_view(), name="click-prepare"),
     path("click/complete/", views.ClickCompleteView.as_view(), name="click-complete"),
+    path("demo/<str:provider>/<str:number>/", views.DemoPaymentView.as_view(), name="demo"),
 ]

@@ -36,17 +36,20 @@ REQUIRED = ("click_trans_id", "service_id", "merchant_trans_id", "amount", "acti
 S = Order.Status
 
 
-def _signed(params: dict, prepare_id: str = "") -> bool:
-    secret = settings.CLICK_SECRET_KEY
-    if not secret:
-        return False
+def sign(params: dict, secret: str, prepare_id: str = "") -> str:
     raw = (
         f"{params['click_trans_id']}{params['service_id']}{secret}{params['merchant_trans_id']}"
         f"{prepare_id}{params['amount']}{params['action']}{params['sign_time']}"
     )
     # nosemgrep: python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5
-    expected = hashlib.md5(raw.encode()).hexdigest()  # noqa: S324 — алгоритм задан протоколом Click
-    return hmac.compare_digest(expected, str(params["sign_string"]))
+    return hashlib.md5(raw.encode()).hexdigest()  # noqa: S324 — алгоритм задан протоколом Click
+
+
+def _signed(params: dict, prepare_id: str = "", secret: str | None = None) -> bool:
+    secret = secret if secret is not None else settings.CLICK_SECRET_KEY
+    if not secret:
+        return False
+    return hmac.compare_digest(sign(params, secret, prepare_id), str(params["sign_string"]))
 
 
 def _response(params: dict, code: int, **extra) -> dict:
@@ -71,10 +74,11 @@ def _incomplete(params: dict, *extra: str) -> bool:
 
 
 @transaction.atomic
-def prepare(params: dict, now: datetime) -> dict:
+def prepare(params: dict, now: datetime, secret: str | None = None) -> dict:
+    """secret — только для учебной имитации; настоящие запросы проверяются ключом из настроек."""
     if _incomplete(params):
         return _response(params, BAD_REQUEST)
-    if not _signed(params):
+    if not _signed(params, secret=secret):
         return _response(params, SIGN_FAILED)
     if params["action"] != "0":
         return _response(params, BAD_ACTION)
@@ -114,10 +118,10 @@ def _prepared_payment(params: dict) -> Payment | None:
 
 
 @transaction.atomic
-def complete(params: dict, now: datetime) -> dict:
+def complete(params: dict, now: datetime, secret: str | None = None) -> dict:
     if _incomplete(params, "merchant_prepare_id"):
         return _response(params, BAD_REQUEST)
-    if not _signed(params, params["merchant_prepare_id"]):
+    if not _signed(params, params["merchant_prepare_id"], secret=secret):
         return _response(params, SIGN_FAILED)
     if params["action"] != "1":
         return _response(params, BAD_ACTION)
