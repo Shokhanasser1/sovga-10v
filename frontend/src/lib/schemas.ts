@@ -168,6 +168,8 @@ export const orderSchema = z.object({
   address_landmark: z.string(),
   comment: z.string(),
   can_cancel: z.boolean(),
+  can_pay: z.boolean(),
+  pay_providers: z.array(z.enum(["payme", "click"])),
   lines: z.array(
     z.object({
       sku: z.string(),

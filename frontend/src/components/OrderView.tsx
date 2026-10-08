@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { ApiClientError, cancelOrder, fetchOrder } from "@/lib/api-client";
+import { ApiClientError, cancelOrder, fetchOrder, payLink } from "@/lib/api-client";
 import { formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/navigation";
@@ -12,6 +12,8 @@ import type { Order } from "@/lib/schemas";
 
 import forms from "./Forms.module.css";
 import styles from "./OrderView.module.css";
+
+const PROVIDER_NAMES = { payme: "Payme", click: "Click" } as const;
 
 export function OrderView({ lang, number }: { lang: Locale; number: string }) {
   const dict = getDictionary(lang);
@@ -31,6 +33,17 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
         }
       });
   }, [number, lang, router, dict.notFoundTitle]);
+
+  async function pay(provider: "payme" | "click") {
+    setBusy(true);
+    setError("");
+    try {
+      window.location.assign(await payLink(number, provider, lang));
+    } catch (failure) {
+      setError((failure as Error).message);
+      setBusy(false);
+    }
+  }
 
   async function cancel() {
     setBusy(true);
@@ -57,10 +70,20 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
           {error}
         </p>
       )}
-      {order.status === "confirmed" && (
+      {order.can_pay && (
         <div className={styles.notice}>
           <p>{dict.priceLocked(formatDateTime(order.price_lock_until, lang))}</p>
-          <p>{dict.payNext}</p>
+          {order.pay_providers.length > 0 ? (
+            <div className={styles.payButtons}>
+              {order.pay_providers.map((provider) => (
+                <button key={provider} className="button" type="button" disabled={busy} onClick={() => pay(provider)}>
+                  {busy ? dict.payRedirect : dict.payWith(PROVIDER_NAMES[provider])}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p>{dict.payNext}</p>
+          )}
         </div>
       )}
       <div className={forms.checkout}>

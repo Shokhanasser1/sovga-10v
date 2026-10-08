@@ -161,3 +161,11 @@ export function fetchOrder(number: string): Promise<Order> {
 export function cancelOrder(number: string): Promise<Order> {
   return post(`/api/v1/orders/${encodeURIComponent(number)}/cancel/`, orderSchema);
 }
+
+export async function payLink(number: string, provider: "payme" | "click", lang: string): Promise<string> {
+  const response = await post(`/api/v1/orders/${encodeURIComponent(number)}/pay/`, z.object({ url: z.string().url() }), {
+    provider,
+    lang,
+  });
+  return response.url;
+}
