@@ -99,3 +99,14 @@ def test_compare_hides_variants_of_unpublished_models(catalog, phones, apple, ma
 
     assert response.status_code == 400
     assert "6000" not in response.content.decode()
+
+
+def test_product_detail_includes_attribute_definitions(catalog, client):
+    body = client.get(f"{BASE}/products/iphone-16-pro/").json()
+
+    definitions = {d["code"]: d for d in body["attribute_definitions"]}
+    assert [d["code"] for d in body["attribute_definitions"]] == ["battery_mah", "storage_gb", "color", "weight_g"]
+    assert definitions["storage_gb"] == {
+        "code": "storage_gb", "name_ru": "storage_gb", "name_uz": "storage_gb", "unit": "",
+        "type": "number", "level": "variant", "is_variant_axis": True, "comparison": "higher_better",
+    }

@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Brand, Category, ProductModel, Status, Variant
+from .models import AttributeDefinition, Brand, Category, ProductModel, Status, Variant
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -33,19 +33,30 @@ class ProductListSerializer(serializers.ModelSerializer):
         ]
 
 
+class AttributeDefinitionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AttributeDefinition
+        fields = ["code", "name_ru", "name_uz", "unit", "type", "level", "is_variant_axis", "comparison"]
+
+
 class ProductDetailSerializer(ProductListSerializer):
     variants = serializers.SerializerMethodField()
+    attribute_definitions = serializers.SerializerMethodField()
 
     class Meta(ProductListSerializer.Meta):
         fields = ProductListSerializer.Meta.fields + [
             "description_ru", "description_uz", "attributes",
             "seo_title_ru", "seo_title_uz", "seo_description_ru", "seo_description_uz",
-            "variants",
+            "variants", "attribute_definitions",
         ]
 
     def get_variants(self, obj: ProductModel) -> list[dict]:
         active = [variant for variant in obj.variants.all() if variant.status == Status.ACTIVE]
         return VariantSerializer(active, many=True).data
+
+    def get_attribute_definitions(self, obj: ProductModel) -> list[dict]:
+        """Названия и единицы для характеристик и выбора варианта — в порядке категории."""
+        return AttributeDefinitionSerializer(obj.category.effective_attributes(), many=True).data
 
 
 class ComparisonRowSerializer(serializers.Serializer):
