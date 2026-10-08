@@ -58,11 +58,11 @@ def test_promoted_customer_login_is_not_reused():
 
 def test_attempt_limit_holds_even_if_the_counter_was_read_stale():
     sender = FakeSender()
-    request_code(PHONE, NOW, sender)
+    otp = request_code(PHONE, NOW, sender)
     OtpCode.objects.update(attempts=MAX_ATTEMPTS)
 
     with pytest.raises(OtpError) as exc:
-        verify_code(PHONE, sender.codes[0], NOW)
+        verify_code(PHONE, sender.codes[0], NOW, challenge_id=otp.pk)
 
     assert exc.value.code == "locked"
 
@@ -83,20 +83,8 @@ def test_undelivered_code_cannot_be_used(monkeypatch):
         request_code(PHONE, NOW, BrokenSender())
 
     with pytest.raises(OtpError) as exc:
-        verify_code(PHONE, "123456", NOW)
+        verify_code(PHONE, "123456", NOW, challenge_id=OtpCode.objects.get().pk)
     assert exc.value.code == "expired"
-
-
-def test_new_code_cancels_the_previous_one():
-    sender = FakeSender()
-    request_code(PHONE, NOW, sender)
-    request_code(PHONE, NOW + timedelta(seconds=61), sender)
-    old, new = sender.codes
-
-    if old != new:
-        with pytest.raises(OtpError):
-            verify_code(PHONE, old, NOW + timedelta(seconds=62))
-    verify_code(PHONE, new, NOW + timedelta(seconds=62))
 
 
 def test_existing_customer_promoted_to_staff_cannot_log_in_by_code():
@@ -123,9 +111,9 @@ def test_limits_are_checked_under_a_per_phone_lock(monkeypatch):
     calls = []
     original = otp_module._check_limits
 
-    def spy(phone, now):
+    def spy(phone, now, ip):
         calls.append(OtpPhone.objects.filter(phone=phone).exists())
-        return original(phone, now)
+        return original(phone, now, ip)
 
     monkeypatch.setattr(otp_module, "_check_limits", spy)
     request_code(PHONE, NOW, FakeSender())

@@ -18,6 +18,8 @@ from .senders import build_sender
 from .services import AccountConflict, customer_for_phone
 
 RATE_ERRORS = {"too_soon", "too_many"}
+# Номер выданного кода в сессии: проверка идёт только по коду, запрошенному этим браузером.
+CHALLENGE_KEY = "otp_challenge"
 
 
 class PhoneSerializer(serializers.Serializer):
@@ -78,9 +80,13 @@ class RequestCodeView(APIView):
         serializer = PhoneSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         try:
-            otp = request_code(serializer.validated_data["phone"], timezone.now(), build_sender(), ip=_ip(request))
+            otp = request_code(
+                serializer.validated_data["phone"], timezone.now(), build_sender(),
+                ip=_ip(request), previous_id=request.session.get(CHALLENGE_KEY),
+            )
         except OtpError as error:
             return _otp_error(error)
+        request.session[CHALLENGE_KEY] = otp.pk
         return Response({"sent": True, "channel": otp.channel, "resend_after": 60})
 
 
@@ -94,13 +100,17 @@ class VerifyView(APIView):
         serializer.is_valid(raise_exception=True)
         phone = serializer.validated_data["phone"]
         try:
-            verify_code(phone, serializer.validated_data["code"], timezone.now())
+            verify_code(
+                phone, serializer.validated_data["code"], timezone.now(),
+                challenge_id=request.session.get(CHALLENGE_KEY),
+            )
         except OtpError as error:
             return _otp_error(error)
         try:
             customer = customer_for_phone(phone)
         except AccountConflict as error:
             return Response({"detail": str(error), "code": "conflict"}, status=status.HTTP_409_CONFLICT)
+        request.session.pop(CHALLENGE_KEY, None)
         login(request, customer.user, backend="django.contrib.auth.backends.ModelBackend")
         return Response({"customer": customer_payload(customer)})
 

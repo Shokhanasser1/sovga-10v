@@ -50,9 +50,9 @@ def test_code_is_sent_and_verified_once():
     assert phone == PHONE and len(code) == 6 and code.isdigit()
     assert otp.channel == "fake"
     assert code not in otp.code_hash
-    verify_code(PHONE, code, now + timedelta(minutes=1))
+    verify_code(PHONE, code, now + timedelta(minutes=1), challenge_id=otp.pk)
     with pytest.raises(OtpError) as exc:
-        verify_code(PHONE, code, now + timedelta(minutes=2))
+        verify_code(PHONE, code, now + timedelta(minutes=2), challenge_id=otp.pk)
     assert exc.value.code == "expired"
 
 
@@ -82,26 +82,26 @@ def test_at_most_five_codes_per_hour():
 @pytest.mark.django_db
 def test_code_expires_after_five_minutes():
     sender, now = FakeSender(), timezone.now()
-    request_code(PHONE, now, sender)
+    otp = request_code(PHONE, now, sender)
 
     with pytest.raises(OtpError) as exc:
-        verify_code(PHONE, sender.sent[0][1], now + timedelta(minutes=6))
+        verify_code(PHONE, sender.sent[0][1], now + timedelta(minutes=6), challenge_id=otp.pk)
     assert exc.value.code == "expired"
 
 
 @pytest.mark.django_db
 def test_five_wrong_attempts_lock_the_code():
     sender, now = FakeSender(), timezone.now()
-    request_code(PHONE, now, sender)
+    otp = request_code(PHONE, now, sender)
     right = sender.sent[0][1]
     wrong = "000000" if right != "000000" else "111111"
 
     for _ in range(5):
         with pytest.raises(OtpError) as exc:
-            verify_code(PHONE, wrong, now)
+            verify_code(PHONE, wrong, now, challenge_id=otp.pk)
         assert exc.value.code == "wrong"
     with pytest.raises(OtpError) as exc:
-        verify_code(PHONE, right, now)
+        verify_code(PHONE, right, now, challenge_id=otp.pk)
     assert exc.value.code == "locked"
 
 

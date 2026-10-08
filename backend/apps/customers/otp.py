@@ -1,8 +1,14 @@
 """Коды входа: выдача с ограничениями и проверка.
 
-Ограничения: код живёт 5 минут; действует только последний выданный; повтор — не раньше чем через
-минуту; не больше 5 кодов в час и 10 в сутки на номер; не больше 5 попыток ввода на код.
-Итого не больше 50 попыток угадать код в сутки на номер — при миллионе вариантов это 0,005 %.
+Код привязан к «вызову» (challenge) — сессии браузера, которая его запросила: проверка идёт только
+по своему коду. Поэтому чужие запросы не отменяют код владельца, а чужие неверные попытки его не
+блокируют.
+
+Ограничения:
+- на пару «номер + адрес»: повтор не раньше чем через минуту, 5 кодов в час, 10 в сутки;
+- на номер в целом: 20 кодов в сутки — потолок расходов на SMS и общего числа угадываний
+  (20 × 5 попыток = 100 в сутки, это 0,01 % от миллиона вариантов);
+- код живёт 5 минут, на него не больше 5 попыток ввода.
 """
 
 import hashlib
@@ -21,6 +27,7 @@ CODE_TTL = timedelta(minutes=5)
 RESEND_AFTER = timedelta(seconds=60)
 MAX_PER_HOUR = 5
 MAX_PER_DAY = 10
+MAX_PER_PHONE_PER_DAY = 20
 MAX_ATTEMPTS = 5
 
 
@@ -43,16 +50,17 @@ def _new_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
-def _active(phone: str, now: datetime):
-    return OtpCode.objects.filter(phone=phone, consumed_at__isnull=True, expires_at__gt=now)
-
-
-def _check_limits(phone: str, now: datetime) -> None:
-    day = OtpCode.objects.filter(phone=phone, created_at__gte=now - timedelta(days=1))
-    last = day.first()
+def _check_limits(phone: str, now: datetime, ip: str | None) -> None:
+    phone_day = OtpCode.objects.filter(phone=phone, created_at__gte=now - timedelta(days=1))
+    mine = phone_day.filter(ip=ip) if ip else phone_day.filter(ip__isnull=True)
+    last = mine.first()
     if last and now - last.created_at < RESEND_AFTER:
         raise OtpError("Код уже отправлен. Запросить новый можно через минуту.", "too_soon")
-    if day.filter(created_at__gte=now - timedelta(hours=1)).count() >= MAX_PER_HOUR or day.count() >= MAX_PER_DAY:
+    too_many_here = (
+        mine.filter(created_at__gte=now - timedelta(hours=1)).count() >= MAX_PER_HOUR
+        or mine.count() >= MAX_PER_DAY
+    )
+    if too_many_here or phone_day.count() >= MAX_PER_PHONE_PER_DAY:
         raise OtpError("Слишком много кодов. Попробуйте позже.", "too_many")
 
 
@@ -63,10 +71,12 @@ def _lock_phone(phone: str, now: datetime) -> None:
 
 
 @transaction.atomic
-def _issue(phone: str, now: datetime, ip: str | None) -> tuple[OtpCode, str]:
+def _issue(phone: str, now: datetime, ip: str | None, previous_id: int | None) -> tuple[OtpCode, str]:
     _lock_phone(phone, now)
-    _check_limits(phone, now)
-    _active(phone, now).update(expires_at=now)  # действует только последний код
+    _check_limits(phone, now, ip)
+    if previous_id:
+        # Новый код в той же сессии заменяет её прошлый код; коды других сессий не трогаем.
+        OtpCode.objects.filter(pk=previous_id, phone=phone, consumed_at__isnull=True).update(expires_at=now)
     code = _new_code()
     otp = OtpCode.objects.create(
         phone=phone, code_hash=_hash(phone, code), created_at=now, expires_at=now + CODE_TTL, ip=ip
@@ -74,8 +84,10 @@ def _issue(phone: str, now: datetime, ip: str | None) -> tuple[OtpCode, str]:
     return otp, code
 
 
-def request_code(phone: str, now: datetime, sender: OtpSender, ip: str | None = None) -> OtpCode:
-    otp, code = _issue(phone, now, ip)
+def request_code(
+    phone: str, now: datetime, sender: OtpSender, ip: str | None = None, previous_id: int | None = None
+) -> OtpCode:
+    otp, code = _issue(phone, now, ip, previous_id)
     # Отправляем уже после транзакции: сетевой запрос не держит блокировку номера.
     try:
         otp.channel = sender.send(phone, code)
@@ -86,18 +98,25 @@ def request_code(phone: str, now: datetime, sender: OtpSender, ip: str | None = 
     return otp
 
 
-def verify_code(phone: str, code: str, now: datetime) -> None:
+def verify_code(phone: str, code: str, now: datetime, challenge_id: int | None) -> None:
     # Ошибку поднимаем после транзакции: иначе откат отменил бы счётчик попыток.
-    error = _check_and_count_attempt(phone, code, now)
+    error = _check_and_count_attempt(phone, code, now, challenge_id)
     if error:
         raise error
 
 
 @transaction.atomic
-def _check_and_count_attempt(phone: str, code: str, now: datetime) -> OtpError | None:
-    otp = _active(phone, now).select_for_update().first()
+def _check_and_count_attempt(phone: str, code: str, now: datetime, challenge_id: int | None) -> OtpError | None:
+    expired = OtpError("Код истёк или уже использован. Запросите новый.", "expired")
+    if not challenge_id:
+        return expired
+    otp = (
+        OtpCode.objects.select_for_update()
+        .filter(pk=challenge_id, phone=phone, consumed_at__isnull=True, expires_at__gt=now)
+        .first()
+    )
     if otp is None:
-        return OtpError("Код истёк или уже использован. Запросите новый.", "expired")
+        return expired
     # Условное увеличение в одном UPDATE: параллельные запросы не проскочат лимит даже без блокировок.
     counted = OtpCode.objects.filter(pk=otp.pk, attempts__lt=MAX_ATTEMPTS).update(attempts=F("attempts") + 1)
     if not counted:
@@ -105,6 +124,4 @@ def _check_and_count_attempt(phone: str, code: str, now: datetime) -> OtpError |
     if not hmac.compare_digest(otp.code_hash, _hash(phone, code.strip())):
         return OtpError("Неверный код.", "wrong")
     used = OtpCode.objects.filter(pk=otp.pk, consumed_at__isnull=True).update(consumed_at=now)
-    if not used:
-        return OtpError("Код истёк или уже использован. Запросите новый.", "expired")
-    return None
+    return None if used else expired
