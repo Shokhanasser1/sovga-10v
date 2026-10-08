@@ -8,11 +8,14 @@ from apps.notifications import telegram
 from apps.notifications.telegram import send_message
 from apps.orders.fulfilment import add_supplier_unit
 from apps.orders.supplier_requests import RequestError, answer_request, offer_price
+from apps.sourcing.fetch import FILE_SUFFIXES, import_file
+from apps.sourcing.models import Supplier
 
 from . import texts
 from .links import redeem
 from .models import TelegramLink
 
+PRICE_FILE_LIMIT = 5 * 1024 * 1024
 # IMEI от поставщика: «356938035643809» или «SG000013 356938035643809» (пробелы не важны).
 IMEI_MESSAGE = re.compile(r"^(SG\d{6})?(\d{15})$", re.ASCII)
 
@@ -24,6 +27,28 @@ def handle_update(update: dict, now: datetime) -> None:
     message = update.get("message")
     if message and isinstance(message.get("text"), str):
         on_message(message["chat"]["id"], message["text"].strip(), now)
+    elif message and isinstance(message.get("document"), dict):
+        on_document(message["chat"]["id"], message["document"], now)
+
+
+def on_document(chat_id: int, document: dict, now: datetime) -> None:
+    """Поставщик прислал прайс файлом — загружаем как из таблицы."""
+    supplier = Supplier.objects.filter(telegram_chat_id=chat_id).first()
+    if supplier is None:
+        send_message(chat_id, texts.HELP)
+        return
+    name = str(document.get("file_name") or "")
+    if not name.lower().endswith(FILE_SUFFIXES):
+        reply = "Пришлите прайс файлом .xlsx или .csv"
+    elif (document.get("file_size") or 0) > PRICE_FILE_LIMIT:
+        reply = "Файл больше 5 МБ — уберите лишние листы или пришлите прайс частями"
+    else:
+        run = import_file(supplier, name, telegram.download_file(document["file_id"], PRICE_FILE_LIMIT), now)
+        reply = f"Прайс не принят: {run.error}" if run.error else (
+            f"Прайс принят: строк {run.rows_total}, сопоставлено {run.rows_matched}, "
+            f"ждут сопоставления {run.rows_unmatched}, с ошибками {run.rows_invalid}"
+        )
+    send_message(chat_id, reply)
 
 
 def on_callback(query: dict, now: datetime) -> None:

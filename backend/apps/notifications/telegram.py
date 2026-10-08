@@ -38,6 +38,30 @@ def call(
     return body.get("result")
 
 
+def download_file(
+    file_id: str,
+    max_bytes: int,
+    token: str | None = None,
+    http_get: Callable[..., requests.Response] = requests.get,
+) -> bytes:
+    """Файл, присланный боту. Больше max_bytes — не скачиваем."""
+    token = token or settings.TELEGRAM_BOT_TOKEN
+    info = call("getFile", {"file_id": file_id})
+    path = info.get("file_path") if isinstance(info, dict) else None
+    if not path:
+        raise TelegramError("Telegram не отдал файл")
+    if (info.get("file_size") or 0) > max_bytes:
+        raise TelegramError("Файл больше допустимого размера")
+    try:
+        response = http_get(f"https://api.telegram.org/file/bot{token}/{path}", timeout=30)
+        response.raise_for_status()
+    except requests.RequestException as error:
+        raise TelegramError(f"Telegram недоступен: {type(error).__name__}") from None  # в адресе — токен
+    if len(response.content) > max_bytes:
+        raise TelegramError("Файл больше допустимого размера")
+    return response.content
+
+
 def send_message(
     chat_id: int | str,
     text: str,

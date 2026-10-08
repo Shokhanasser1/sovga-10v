@@ -1,5 +1,6 @@
 """Загрузка прайсов: по ссылке (Google Sheets CSV, JSON API) и из файла."""
 
+import io
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
@@ -43,17 +44,37 @@ def sync_supplier(
     return import_feed(supplier, parse_rows(records, supplier.columns), now)
 
 
-def read_file(path: str | Path) -> list[dict]:
+FILE_SUFFIXES = (".xlsx", ".xlsm", ".csv")
+
+
+def read_bytes(filename: str, data: bytes) -> list[dict]:
     """.xlsx или .csv (UTF-8 или Windows-1251 — как сохраняет русский Excel)."""
-    path = Path(path)
-    suffix = path.suffix.lower()
+    suffix = Path(filename).suffix.lower()
     if suffix in (".xlsx", ".xlsm"):
-        return read_xlsx(path)
+        return read_xlsx(io.BytesIO(data))
     if suffix == ".csv":
-        data = path.read_bytes()
         try:
             text = data.decode("utf-8-sig")
         except UnicodeDecodeError:
             text = data.decode("cp1251")
         return read_csv(text)
     raise ValueError("Поддерживаются файлы .xlsx и .csv")
+
+
+def read_file(path: str | Path) -> list[dict]:
+    path = Path(path)
+    return read_bytes(path.name, path.read_bytes())
+
+
+def import_file(supplier: Supplier, filename: str, data: bytes, now: datetime) -> SupplierFeedRun:
+    """Прайс файлом (например, присланный в бот). Ошибка — запись в журнале, остатки не трогаем."""
+    problems = validate_columns(supplier.columns)
+    if problems:
+        return SupplierFeedRun.objects.create(supplier=supplier, started_at=now, error="; ".join(problems))
+    try:
+        records = read_bytes(filename, data)
+    except Exception:  # чужой файл может быть каким угодно — не падаем, а сообщаем
+        return SupplierFeedRun.objects.create(
+            supplier=supplier, started_at=now, error="Файл не читается — сохраните прайс заново как .xlsx или .csv"
+        )
+    return import_feed(supplier, parse_rows(records, supplier.columns), now)

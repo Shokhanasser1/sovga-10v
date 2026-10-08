@@ -30,6 +30,8 @@ class FakeTelegram:
             return updates
         if method == "sendMessage":
             return {"message_id": len(self.calls)}
+        if method == "getFile":
+            return {"file_id": payload["file_id"], "file_path": f"documents/{payload['file_id']}.bin", "file_size": 5}
         return True
 
     def sent(self, chat_id=None) -> list[str]:
