@@ -1,22 +1,15 @@
 """Сквозная проверка витрины в настоящем браузере.
 
-Что нужно запущенным:
-  1. Django с демо-данными: из backend/ — manage.py seed_demo, затем manage.py runserver
-     с DEBUG=true, OTP_FIXED_CODE=000000 (код входа для проверки оформления заказа),
-     PAYME_MERCHANT_ID=e2e и PAYME_KEY=e2e-payme-key (скрипт сам играет роль Payme)
-     и TELEGRAM_BOT_TOKEN=e2e, TELEGRAM_BOT_USERNAME=sovga_e2e_bot (кнопка «Статусы в Telegram»)
+Что нужно запущенным — в учебном режиме, без единого ключа (start.cmd из папки scripts делает всё сам):
+  1. Django с демо-данными и DEMO_MODE=true: код входа — на экране, оплата — страница «Учебная оплата»
   2. Витрина: из frontend/ — npm run build, затем npm start
 Запуск: python e2e/storefront_check.py   (адреса — переменные STOREFRONT_URL и API_URL)
 Скриншоты сохраняются в e2e/shots/.
 """
 
-import base64
-import json
 import os
 import random
 import sys
-import time
-import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
@@ -25,9 +18,6 @@ OUT = Path(__file__).parent / "shots"
 OUT.mkdir(exist_ok=True)
 BASE = os.environ.get("STOREFRONT_URL", "http://localhost:3000").rstrip("/")
 API = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
-OTP_CODE = os.environ.get("E2E_OTP_CODE", "000000")
-PAYME_KEY = os.environ.get("E2E_PAYME_KEY", "e2e-payme-key")
-BOT_USERNAME = os.environ.get("E2E_BOT_USERNAME", "sovga_e2e_bot")
 # Свой номер на каждый прогон: лимиты на номер (раз в минуту, 5 в час) не мешают повторным прогонам.
 BUYER_PHONE = f"90 {random.randint(100, 999)} {random.randint(10, 99)} {random.randint(10, 99)}"
 problems: list[str] = []
@@ -37,18 +27,6 @@ def check(condition: bool, message: str) -> None:
     print(("OK   " if condition else "FAIL ") + message)
     if not condition:
         problems.append(message)
-
-
-def payme(method: str, params: dict) -> dict:
-    """Запрос от имени Payme к нашему Merchant API — как это делает их сервер после оплаты картой."""
-    auth = base64.b64encode(f"Paycom:{PAYME_KEY}".encode()).decode()
-    request = urllib.request.Request(
-        f"{API}/api/v1/payments/payme/",
-        data=json.dumps({"id": 1, "method": method, "params": params}).encode(),
-        headers={"Content-Type": "application/json", "Authorization": f"Basic {auth}"},
-    )
-    with urllib.request.urlopen(request, timeout=10) as response:
-        return json.load(response)
 
 
 def open_cart(page) -> None:
@@ -88,6 +66,7 @@ with sync_playwright() as p:
     page.screenshot(path=OUT / "1-home.png", full_page=True)
     check(page.get_by_role("heading", level=1).inner_text().startswith("Каждый смартфон"), "главная: заголовок")
     check(page.locator("#catalog a").count() >= 5, "главная: категории загрузились")
+    check(page.get_by_text("Учебный магазин").count() == 1, "учебный режим: плашка на витрине")
 
     box = page.get_by_role("combobox")
     box.fill("айфон")
@@ -169,7 +148,7 @@ with sync_playwright() as p:
     mobile.wait_for_load_state("networkidle")
     mobile.screenshot(path=OUT / "8-product-mobile.png", full_page=True)
 
-    # Покупка целиком: карточка → корзина с подарком → вход по коду → оформление → оплата через Payme.
+    # Покупка целиком: карточка → корзина с подарком → вход по коду с экрана → оформление → учебная оплата.
     buyer = browser.new_context(viewport={"width": 1366, "height": 900}).new_page()
     buyer.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
     open_cart(buyer)
@@ -180,7 +159,9 @@ with sync_playwright() as p:
     buyer.wait_for_url("**/ru/login?next=**", timeout=10000)
     buyer.get_by_label("Номер телефона").fill(BUYER_PHONE)
     buyer.get_by_role("button", name="Получить код").click()
-    buyer.get_by_label("Код из сообщения").fill(OTP_CODE)
+    buyer.wait_for_function("/^\\d{6}$/.test(document.querySelector('input[autocomplete=one-time-code]')?.value ?? '')",
+                            timeout=10000)
+    check(buyer.get_by_text("Учебный режим: SMS не отправляется").count() == 1, "вход: код показан на экране и подставлен")
     buyer.get_by_role("button", name="Войти").click()
     buyer.wait_for_url("**/ru/checkout", timeout=10000)
     number = place_order(buyer, screenshot="10-checkout.png")
@@ -189,33 +170,28 @@ with sync_playwright() as p:
     check(buyer.locator("header").get_by_text("Корзина").inner_text().strip() == "Корзина", "корзина очищена после заказа")
     check(buyer.get_by_role("button", name="Оплатить через Payme").count() == 1, "заказ: кнопка оплаты Payme")
 
-    # Ссылка на бота открывается в новой вкладке; сам t.me не нужен — отвечаем заглушкой.
-    buyer.context.route("https://t.me/**", lambda route: route.fulfill(body="telegram"))
-    with buyer.context.expect_page() as popup:
-        buyer.get_by_role("button", name="Получать статусы в Telegram").click()
-    telegram_url = popup.value.url
-    popup.value.close()
-    check(telegram_url.startswith(f"https://t.me/{BOT_USERNAME}?start=c_"), f"заказ: ссылка на бота ({telegram_url[:45]}…)")
+    # Учебный режим: чат подключается сразу, переписка — в админке «Имитация Telegram».
+    buyer.get_by_role("button", name="Получать статусы в Telegram").click()
+    buyer.wait_for_selector("text=Статусы заказа приходят в Telegram", timeout=10000)
+    check(True, "заказ: учебный чат Telegram подключён")
 
-    total = buyer.context.request.get(f"{API}/api/v1/orders/{number}/").json()["total_uzs"]
-    account = {"order_id": number}
-    transaction = f"e2e-{random.randint(10**8, 10**9)}"
-    allowed = payme("CheckPerformTransaction", {"amount": total * 100, "account": account})
-    created = payme("CreateTransaction", {"id": transaction, "time": int(time.time() * 1000), "amount": total * 100, "account": account})
-    performed = payme("PerformTransaction", {"id": transaction})
-    check(allowed.get("result", {}).get("allow") is True and "detail" in allowed["result"], f"Payme: можно платить, чек с ИКПУ ({allowed})")
-    check(created.get("result", {}).get("state") == 1, f"Payme: транзакция создана ({created})")
-    check(performed.get("result", {}).get("state") == 2, f"Payme: транзакция проведена ({performed})")
-    buyer.reload()
+    # Учебная оплата: магазин получает те же запросы Payme, что от настоящего провайдера.
+    buyer.get_by_role("button", name="Оплатить через Payme").click()
+    buyer.wait_for_url(f"**/api/v1/payments/demo/payme/{number}/**", timeout=10000)
+    buyer.screenshot(path=OUT / "12-demo-payment.png", full_page=True)
+    check("Учебная оплата" in buyer.content() and "не списываются" in buyer.content(), "учебная оплата: страница имитации")
+    buyer.get_by_role("button", name="Оплатить", exact=True).click()
+    buyer.wait_for_url(f"**/ru/orders/{number}", timeout=10000)
     buyer.wait_for_selector("text=Оплачен", timeout=10000)
-    buyer.screenshot(path=OUT / "12-paid.png", full_page=True)
+    buyer.screenshot(path=OUT / "13-paid.png", full_page=True)
     check(buyer.get_by_role("button", name="Отменить заказ").count() == 0, "оплаченный заказ покупатель сам не отменяет")
     check(buyer.get_by_role("button", name="Оплатить через Payme").count() == 0, "оплаченный заказ: кнопок оплаты нет")
-    # Возврат через Payme отменяет заказ и снимает резерв — повторные прогоны снова находят товар на складе.
-    refunded = payme("CancelTransaction", {"id": transaction, "reason": 5})
-    check(refunded.get("result", {}).get("state") == -2, f"Payme: возврат проведён ({refunded})")
-    buyer.reload()
+    # «Провайдер вернул деньги»: заказ отменяется, резерв снимается — повторные прогоны снова находят товар.
+    buyer.goto(f"{API}/api/v1/payments/demo/payme/{number}/?lang=ru")
+    buyer.get_by_role("button", name="Провайдер вернул деньги").click()
+    buyer.wait_for_url(f"**/ru/orders/{number}", timeout=10000)
     buyer.wait_for_selector("text=Отменён", timeout=10000)
+    check(True, "учебная оплата: возврат денег отменил заказ")
 
     # Второй заказ: покупатель уже вошёл — сразу оформление, затем отмена.
     open_cart(buyer)
