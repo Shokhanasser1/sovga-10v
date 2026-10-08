@@ -64,3 +64,19 @@ class MarkupRule(models.Model):
         scopes = [value for value in (self.variant_id, self.category_id, self.brand_id) if value]
         if len(scopes) > 1:
             raise ValidationError("Укажите не больше одной области: вариант, категория или бренд")
+
+
+class PriceSnapshot(models.Model):
+    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="price_snapshots")
+    price_uzs = models.PositiveBigIntegerField()
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=2)
+    rate = models.DecimalField(max_digits=12, decimal_places=2, help_text="Курс с учётом спреда")
+    offer = models.ForeignKey("sourcing.Offer", null=True, blank=True, on_delete=models.SET_NULL)
+    markup_rule = models.ForeignKey(MarkupRule, null=True, blank=True, on_delete=models.SET_NULL)
+    computed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-computed_at", "-pk"]
+
+    def __str__(self) -> str:
+        return f"{self.variant}: {self.price_uzs} сум"
