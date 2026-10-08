@@ -1,0 +1,34 @@
+import requests
+from django.core.management import call_command
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+
+from apps.pricing.models import ExchangeRate
+from apps.pricing.repricing import reprice_all
+from apps.sourcing.reservations import release_expired
+
+
+class Command(BaseCommand):
+    help = (
+        "Периодические задачи — запускать каждые 15–30 минут (Планировщик заданий Windows / cron): "
+        "прайсы поставщиков, курс ЦБ, пересчёт цен, снятие просроченных резервов"
+    )
+
+    def handle(self, *args, **options) -> None:
+        call_command("import_supplier_feeds", stdout=self.stdout, stderr=self.stderr)
+        try:
+            call_command("fetch_cbu_rate", stdout=self.stdout, stderr=self.stderr)
+        except (requests.RequestException, ValueError) as error:
+            self.stderr.write(f"Курс ЦБ не обновлён, работаем по последнему: {error}")
+        now = timezone.now()
+        rate = ExchangeRate.objects.order_by("-date").first()
+        if rate is None:
+            self.stderr.write("Нет ни одного курса — цены не пересчитаны")
+        else:
+            result = reprice_all(rate, now)
+            self.stdout.write(
+                f"Цены: изменено {result.changed}, без предложения {result.unpriced}"
+            )
+            if result.missing_rule:
+                self.stderr.write("Нет правила наценки для: " + ", ".join(result.missing_rule))
+        self.stdout.write(f"Снято просроченных резервов: {release_expired(now)}")
