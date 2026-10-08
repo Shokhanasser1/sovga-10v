@@ -112,7 +112,7 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
                 {line.is_gift && <span className={styles.giftBadge}>{dict.giftLabel}</span>}
                 {line.devices.map((device) => (
                   <span key={device.imei} className={styles.device}>
-                    {dict.warranty(device.imei, formatDate(device.warranty_until, lang))}
+                    {dict.warranty(device.imei, formatDate(device.warranty_until, lang).replaceAll(" ", " "))}
                   </span>
                 ))}
               </span>
