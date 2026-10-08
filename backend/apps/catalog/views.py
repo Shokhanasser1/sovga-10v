@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 from .comparison import compare_variants
 from .compatibility import compatible_accessories
 from .models import Category, ProductModel, Status, Variant
+from .search import suggest
 from .serializers import (
     CategorySerializer,
     ComparisonRowSerializer,
@@ -85,3 +86,18 @@ class CompareView(APIView):
         except ValueError as error:
             raise ValidationError({"detail": str(error)}) from error
         return Response(ComparisonRowSerializer(rows, many=True).data)
+
+
+class SuggestView(APIView):
+    """Автокомплит в шапке: до 8 товаров и 3 категорий."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        result = suggest(request.query_params.get("q", ""))
+        return Response(
+            {
+                "products": ProductListSerializer(result["products"], many=True).data,
+                "categories": CategorySerializer(result["categories"], many=True).data,
+            }
+        )

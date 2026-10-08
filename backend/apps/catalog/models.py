@@ -158,9 +158,24 @@ class ProductModel(models.Model):
     seo_description_uz = models.CharField(max_length=300, blank=True)
     is_accessory = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    search_text = models.TextField(blank=True, editable=False)
 
     def __str__(self) -> str:
         return self.name_ru
+
+    def build_search_text(self) -> str:
+        """Названия ru/uz, бренд и цепочка категорий — в нормализованном виде, с пробелами по краям."""
+        parts = [self.name_ru, self.name_uz]
+        if self.brand_id:
+            parts.append(self.brand.name)
+        if self.category_id:
+            for category in self.category.lineage():
+                parts += [category.name_ru, category.name_uz]
+        return f" {normalize(' '.join(parts))} "
+
+    def save(self, *args, **kwargs) -> None:
+        self.search_text = self.build_search_text()
+        super().save(*args, **kwargs)
 
     def clean(self) -> None:
         if self.category_id is None:

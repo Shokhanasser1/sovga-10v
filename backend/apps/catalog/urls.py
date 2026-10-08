@@ -14,4 +14,5 @@ urlpatterns = [
         name="product-accessories",
     ),
     path("compare/", views.CompareView.as_view(), name="compare"),
+    path("search/suggest/", views.SuggestView.as_view(), name="search-suggest"),
 ]
