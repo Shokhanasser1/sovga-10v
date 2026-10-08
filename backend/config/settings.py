@@ -31,6 +31,7 @@ INSTALLED_APPS = [
     "apps.pricing",
     "apps.promo",
     "apps.customers",
+    "apps.notifications",
 ]
 
 MIDDLEWARE = [
@@ -130,3 +131,7 @@ OTP_SMS_TEMPLATE = env("OTP_SMS_TEMPLATE", default="Sovga: kirish kodi {code}")
 OTP_FIXED_CODE = env("OTP_FIXED_CODE", default="")
 if OTP_FIXED_CODE and not DEBUG:
     raise ImproperlyConfigured("OTP_FIXED_CODE допустим только при DEBUG=true")
+
+# Telegram-бот: уведомления менеджерам (новый заказ и т. п.). Токен — только из окружения.
+TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
+MANAGER_CHAT_IDS = env.list("MANAGER_CHAT_IDS", default=[])
