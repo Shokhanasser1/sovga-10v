@@ -71,8 +71,9 @@ class CompareView(APIView):
             raise ValidationError({"skus": f"Укажите от 2 до {MAX_COMPARE} SKU через запятую"})
         found = {
             variant.sku: variant
-            for variant in Variant.objects.filter(sku__in=skus, status=Status.ACTIVE)
-            .select_related("product_model__category")
+            for variant in Variant.objects.filter(
+                sku__in=skus, status=Status.ACTIVE, product_model__status=Status.ACTIVE
+            ).select_related("product_model__category")
         }
         missing = [sku for sku in skus if sku not in found]
         if missing:

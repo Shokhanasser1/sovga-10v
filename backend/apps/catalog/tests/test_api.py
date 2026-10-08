@@ -86,3 +86,16 @@ def test_compare_rejects_bad_requests(catalog, client, skus):
 
 def test_api_is_read_only(catalog, client):
     assert client.post(f"{BASE}/products/", {}).status_code in (403, 405)
+
+
+def test_compare_hides_variants_of_unpublished_models(catalog, phones, apple, make_variant, client):
+    secret = ProductModel.objects.create(category=phones, brand=apple, slug="iphone-18-pro",
+                                         name_ru="iPhone 18 Pro", name_uz="iPhone 18 Pro",
+                                         attributes={"battery_mah": 6000}, status=Status.DRAFT)
+    make_variant(secret, "IP18-256", {"storage_gb": 256, "color": "black"},
+                 status=Status.ACTIVE).save()
+
+    response = client.get(f"{BASE}/compare/", {"skus": "IP-256-B,IP18-256"})
+
+    assert response.status_code == 400
+    assert "6000" not in response.content.decode()
