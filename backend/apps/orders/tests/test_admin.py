@@ -70,3 +70,27 @@ def test_failed_events_can_be_retried(admin_client):
 
     event.refresh_from_db()
     assert (event.status, event.attempts) == (OutboxEvent.Status.PENDING, 0)
+
+
+def test_view_only_staff_cannot_run_actions(client, sourcing_order):
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+
+    viewer = get_user_model().objects.create_user(username="viewer", password="x", is_staff=True)
+    viewer.user_permissions.add(
+        Permission.objects.get(codename="view_order"), Permission.objects.get(codename="view_outboxevent")
+    )
+    client.force_login(viewer)
+    event = OutboxEvent.objects.create(
+        type="order.created", payload={}, status=OutboxEvent.Status.FAILED, attempts=7, next_attempt_at=timezone.now()
+    )
+
+    client.post(CHANGELIST, {"action": "cancel_action", "_selected_action": [sourcing_order.pk]})
+    client.post(
+        reverse("admin:notifications_outboxevent_changelist"), {"action": "retry", "_selected_action": [event.pk]}
+    )
+
+    sourcing_order.refresh_from_db()
+    event.refresh_from_db()
+    assert sourcing_order.status == Order.Status.SOURCING
+    assert event.status == OutboxEvent.Status.FAILED

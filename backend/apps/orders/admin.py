@@ -58,11 +58,11 @@ class OrderAdmin(admin.ModelAdmin):
         if done:
             self.message_user(request, f"{done_label}: {done}")
 
-    @admin.action(description="Подтвердить у поставщика")
+    @admin.action(description="Подтвердить у поставщика", permissions=["change"])
     def confirm_sourcing_action(self, request, queryset):
         self._apply(request, queryset, confirm_sourcing, "Подтверждено")
 
-    @admin.action(description="Отменить (резервы снимутся)")
+    @admin.action(description="Отменить (резервы снимутся)", permissions=["change"])
     def cancel_action(self, request, queryset):
         self._apply(
             request, queryset, lambda order, now, actor: cancel_order(order, now, actor, "Отменён менеджером"),

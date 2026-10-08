@@ -16,7 +16,7 @@ class OutboxEventAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         return False
 
-    @admin.action(description="Повторить доставку")
+    @admin.action(description="Повторить доставку", permissions=["change"])
     def retry(self, request, queryset):
         count = queryset.exclude(status=OutboxEvent.Status.DONE).update(
             status=OutboxEvent.Status.PENDING, attempts=0, next_attempt_at=timezone.now()
