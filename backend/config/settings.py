@@ -2,6 +2,7 @@ from decimal import Decimal
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -29,6 +30,7 @@ INSTALLED_APPS = [
     "apps.inventory",
     "apps.pricing",
     "apps.promo",
+    "apps.customers",
 ]
 
 MIDDLEWARE = [
@@ -109,3 +111,14 @@ INTERNAL_API_TOKEN = env("INTERNAL_API_TOKEN", default="")
 
 # Комиссия эквайринга (Payme/Click) в процентах — уменьшает бюджет подарка
 CARD_COMMISSION_PCT = Decimal(env("CARD_COMMISSION_PCT", default="0"))
+
+# Коды входа: Telegram Gateway, запасной канал — SMS через Eskiz
+TELEGRAM_GATEWAY_TOKEN = env("TELEGRAM_GATEWAY_TOKEN", default="")
+ESKIZ_EMAIL = env("ESKIZ_EMAIL", default="")
+ESKIZ_PASSWORD = env("ESKIZ_PASSWORD", default="")
+ESKIZ_FROM = env("ESKIZ_FROM", default="4546")
+OTP_SMS_TEMPLATE = env("OTP_SMS_TEMPLATE", default="Sovga: kirish kodi {code}")
+# Только для сквозных тестов в режиме разработки
+OTP_FIXED_CODE = env("OTP_FIXED_CODE", default="")
+if OTP_FIXED_CODE and not DEBUG:
+    raise ImproperlyConfigured("OTP_FIXED_CODE допустим только при DEBUG=true")
