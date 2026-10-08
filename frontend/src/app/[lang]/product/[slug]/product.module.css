@@ -1,0 +1,25 @@
+.page {
+  padding-top: 20px;
+}
+
+.crumbs {
+  margin-bottom: 20px;
+}
+
+.crumbs a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.crumbs a:hover {
+  color: var(--cobalt);
+}
+
+.section {
+  margin-top: 64px;
+}
+
+.title {
+  margin: 0 0 16px;
+  font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+}

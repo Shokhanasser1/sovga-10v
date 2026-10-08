@@ -1,0 +1,189 @@
+.purchase {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: clamp(24px, 5vw, 64px);
+  align-items: start;
+}
+
+.media {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border-radius: calc(var(--radius) * 1.5);
+  background: radial-gradient(circle at 50% 40%, var(--paper), var(--cobalt-tint));
+}
+
+.art {
+  height: 72%;
+  transition: filter 200ms ease;
+}
+
+.brand {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.name {
+  margin: 6px 0 24px;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+}
+
+.axis {
+  margin: 0 0 18px;
+  padding: 0;
+  border: 0;
+}
+
+.axis legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-weight: 600;
+}
+
+.options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-small);
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  cursor: pointer;
+  transition: box-shadow 120ms ease;
+}
+
+.option:hover {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+
+.selected,
+.selected:hover {
+  box-shadow: inset 0 0 0 2.5px var(--cobalt);
+  font-weight: 600;
+}
+
+/* Значение есть, но в другой комбинации — выбор переключит другие оси. */
+.otherCombination {
+  box-shadow: inset 0 0 0 1.5px var(--line);
+  color: var(--muted);
+  background: repeating-linear-gradient(-45deg, var(--paper) 0 6px, var(--glaze) 6px 8px);
+}
+
+.soldOut {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: rgb(20 26 46 / 0.35);
+}
+
+.swatch {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgb(20 26 46 / 0.25);
+}
+
+.priceBlock {
+  margin-top: 28px;
+}
+
+.price {
+  margin: 0;
+  font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+}
+
+.available,
+.unavailable {
+  margin: 6px 0 0;
+  font-weight: 500;
+}
+
+.available {
+  color: var(--turquoise-ink);
+}
+
+.unavailable {
+  color: var(--muted);
+}
+
+/* Лента подарка — единственное место с шафраном на странице. */
+.gift {
+  position: relative;
+  overflow: hidden;
+  margin-top: 22px;
+  border-radius: var(--radius);
+  background: var(--saffron-tint);
+}
+
+.giftRibbon {
+  width: 100%;
+  height: 22px;
+}
+
+.giftText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 14px 18px 16px;
+}
+
+.giftText strong {
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.giftText span {
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.delivery {
+  margin: 16px 0 0;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.specsSection {
+  margin-top: 64px;
+}
+
+.sectionTitle {
+  margin: 0 0 16px;
+  font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+}
+
+@media (max-width: 860px) {
+  .purchase {
+    grid-template-columns: 1fr;
+  }
+
+  .media {
+    position: static;
+    aspect-ratio: 4 / 3;
+  }
+}

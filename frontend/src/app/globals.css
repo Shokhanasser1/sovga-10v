@@ -1,0 +1,151 @@
+/*
+  Палитра — риштанская керамика и самаркандские купола:
+  кобальт для действий, бирюза для «есть в наличии» и лучших значений,
+  шафран только для подарка. Фон — холодная белая глазурь.
+*/
+:root {
+  --ink: #141a2e;
+  --muted: #586378;
+  --glaze: #f3f6f9;
+  --paper: #ffffff;
+  --line: #d8dfe8;
+  --cobalt: #2340b0;
+  --cobalt-deep: #172c80;
+  --cobalt-tint: #e6ebfa;
+  --turquoise: #0e9c99;
+  --turquoise-ink: #08706e;
+  --turquoise-tint: #ddf3f2;
+  --saffron: #e8a33d;
+  --saffron-tint: #fbefd9;
+  --danger: #b53a2a;
+
+  --font-display: var(--font-unbounded), "Arial Black", sans-serif;
+  --font-body: var(--font-golos), "Segoe UI", Arial, sans-serif;
+
+  --radius: 14px;
+  --radius-small: 8px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --max: 1240px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--glaze);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+a {
+  color: inherit;
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid var(--cobalt);
+  outline-offset: 2px;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--max);
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.display {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+.price {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--cobalt);
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.button:hover {
+  background: var(--cobalt-deep);
+}
+
+.button:disabled {
+  background: var(--line);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.button-ghost {
+  background: transparent;
+  color: var(--cobalt);
+  box-shadow: inset 0 0 0 2px var(--cobalt);
+}
+
+.button-ghost:hover {
+  background: var(--cobalt-tint);
+}
+
+.notice {
+  padding: 20px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

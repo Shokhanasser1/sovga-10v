@@ -1,0 +1,84 @@
+.title {
+  margin: 32px 0 24px;
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+}
+
+.scroll {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--line);
+}
+
+.table {
+  width: 100%;
+  min-width: 560px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.head {
+  min-width: 180px;
+}
+
+.model {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.model:hover {
+  color: var(--cobalt);
+}
+
+.variant {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 400;
+}
+
+.remove {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.rowName {
+  color: var(--muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+/* Лучшее значение — бирюзовая «плитка» с меткой слева. */
+.best {
+  position: relative;
+  background: var(--turquoise-tint);
+  color: var(--turquoise-ink);
+  font-weight: 600;
+}
+
+.best::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--turquoise);
+}

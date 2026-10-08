@@ -1,0 +1,183 @@
+/* Первый экран «перевязан» лентой, как подарочная коробка. */
+.hero {
+  position: relative;
+  overflow: hidden;
+  min-height: clamp(420px, 62vh, 600px);
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+
+.heroInner {
+  position: relative;
+  z-index: 2;
+  padding-top: clamp(48px, 9vh, 96px);
+  padding-bottom: 140px;
+}
+
+.heroCopy {
+  max-width: 34rem;
+}
+
+.title {
+  margin: 0;
+  font-size: clamp(2.3rem, 5.6vw, 4.6rem);
+  text-wrap: balance;
+}
+
+.lead {
+  max-width: 28rem;
+  margin: 20px 0 28px;
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+
+.ribbonVertical {
+  position: absolute;
+  top: 0;
+  right: clamp(24px, 18vw, 260px);
+  width: 86px;
+  height: 100%;
+  animation: drop 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.ribbonHorizontal {
+  position: absolute;
+  left: 0;
+  bottom: 56px;
+  width: 100%;
+  height: 86px;
+  animation: slide 700ms 150ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Бирка висит на пересечении лент. */
+.tag {
+  position: absolute;
+  z-index: 3;
+  right: calc(clamp(24px, 18vw, 260px) - 34px);
+  bottom: 156px;
+  margin: 0;
+  padding: 14px 18px 14px 34px;
+  border-radius: 6px 14px 14px 6px;
+  background: var(--paper);
+  box-shadow: 0 10px 24px rgb(20 26 46 / 0.18), 0 0 0 1px var(--line);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transform: rotate(-7deg);
+  transform-origin: 0 50%;
+  animation: swing 900ms 500ms cubic-bezier(0.3, 1.4, 0.4, 1) both;
+}
+
+.tagHole {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 2px var(--saffron);
+}
+
+@keyframes drop {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes slide {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes swing {
+  from {
+    opacity: 0;
+    transform: rotate(-24deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-7deg);
+  }
+}
+
+.section {
+  margin-top: 56px;
+}
+
+.sectionTitle {
+  margin: 0 0 20px;
+  font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+}
+
+.categories {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+  padding: 18px 12px 16px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--line);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.category:hover {
+  box-shadow: 0 0 0 2px var(--cobalt);
+}
+
+.categoryArt {
+  height: 84px;
+}
+
+.placeholder {
+  min-height: 160px;
+  border-radius: var(--radius);
+  background: var(--paper);
+  opacity: 0.6;
+}
+
+@media (max-width: 760px) {
+  .ribbonVertical {
+    right: 18px;
+    width: 52px;
+  }
+
+  .ribbonHorizontal {
+    height: 52px;
+    bottom: 40px;
+  }
+
+  .heroInner {
+    padding-bottom: 176px;
+  }
+
+  .heroCopy {
+    padding-right: 64px;
+  }
+
+  .tag {
+    right: 12px;
+    bottom: 100px;
+    font-size: 0.78rem;
+  }
+}

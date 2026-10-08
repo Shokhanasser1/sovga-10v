@@ -1,0 +1,21 @@
+.footer {
+  margin-top: 80px;
+  padding: 32px 0 40px;
+  border-top: 1px solid var(--line);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  align-items: baseline;
+}
+
+.logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+.muted {
+  color: var(--muted);
+}

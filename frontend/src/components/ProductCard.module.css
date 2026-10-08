@@ -1,0 +1,92 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 0 0 1px var(--line);
+  text-decoration: none;
+  transition: box-shadow 150ms ease, transform 150ms ease;
+}
+
+.card:hover {
+  box-shadow: 0 0 0 2px var(--cobalt), 0 12px 28px rgb(20 26 46 / 0.08);
+  transform: translateY(-2px);
+}
+
+.art {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 5 / 4;
+  padding: 16px;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: linear-gradient(180deg, var(--cobalt-tint), var(--paper));
+}
+
+.art svg {
+  height: 100%;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 18px;
+}
+
+.brand {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.name {
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.price {
+  margin-top: auto;
+  padding-top: 8px;
+  font-size: 1.05rem;
+}
+
+.available,
+.unavailable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.available {
+  color: var(--turquoise-ink);
+}
+
+.unavailable {
+  color: var(--muted);
+}
+
+.available::before,
+.unavailable::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* В две колонки на телефоне широкий шрифт цены не помещается — берём основной. */
+@media (max-width: 480px) {
+  .body {
+    padding: 12px 12px 14px;
+  }
+
+  .price {
+    font-family: var(--font-body);
+    font-size: 0.98rem;
+    font-weight: 700;
+  }
+}
