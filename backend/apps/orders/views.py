@@ -24,7 +24,7 @@ def _customer(request) -> Customer:
     return Customer.objects.get(user=request.user)
 
 
-def _own_order(request, number: str) -> Order:
+def own_order(request, number: str) -> Order:
     return get_object_or_404(Order, number=number, customer__user=request.user)
 
 
@@ -65,14 +65,14 @@ class OrderDetailView(APIView):
     permission_classes = [IsCustomer]
 
     def get(self, request, number: str):
-        return Response(order_payload(_own_order(request, number)))
+        return Response(order_payload(own_order(request, number)))
 
 
 class OrderCancelView(APIView):
     permission_classes = [IsCustomer]
 
     def post(self, request, number: str):
-        order = _own_order(request, number)
+        order = own_order(request, number)
         try:
             order = cancel_order(order, timezone.now(), actor=f"customer:{order.customer.phone}", by_customer=True)
         except OrderError as error:

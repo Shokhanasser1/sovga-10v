@@ -167,13 +167,16 @@ def cancel_order(order: Order, now: datetime, actor: str, note: str = "", by_cus
 
 
 def expire_orders(now: datetime) -> int:
-    """Неоплаченные после фиксации цены и неподтверждённые поставщиком за 2 часа — отменяем."""
+    """Неоплаченные после фиксации цены, с брошенной оплатой и неподтверждённые поставщиком — отменяем."""
     expired = [
         (order, "Не оплачен за 30 минут — резерв снят")
         for order in Order.objects.filter(status=S.CONFIRMED, price_lock_until__lt=now)
     ] + [
         (order, "Поставщик не подтвердил наличие за 2 часа")
         for order in Order.objects.filter(status=S.SOURCING, sla_deadline__lt=now)
+    ] + [
+        (order, "Оплата не завершена за 12 часов — резерв снят")
+        for order in Order.objects.filter(status=S.AWAITING_PAYMENT, price_lock_until__lt=now)
     ]
     for order, note in expired:
         transition(order, S.CANCELLED, now, actor="system", note=note)

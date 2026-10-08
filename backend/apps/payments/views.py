@@ -9,8 +9,15 @@ from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.orders.views import IsCustomer, own_order
 
 from . import click, payme
+from .links import LINKS, PaymentUnavailable
+from .services import PAYABLE
 
 
 def _payme_authorized(request) -> bool:
@@ -58,3 +65,25 @@ class ClickPrepareView(ClickView):
 
 class ClickCompleteView(ClickView):
     handler = staticmethod(click.complete)
+
+
+class PayLinkView(APIView):
+    """Ссылка на оплату заказа выбранным провайдером."""
+
+    permission_classes = [IsCustomer]
+
+    def post(self, request, number: str):
+        order = own_order(request, number)
+        build = LINKS.get(str(request.data.get("provider", "")))
+        lang = request.data.get("lang") if request.data.get("lang") in ("ru", "uz") else "ru"
+        if build is None:
+            return Response({"detail": "Неизвестный способ оплаты"}, status=status.HTTP_400_BAD_REQUEST)
+        if order.status not in PAYABLE:
+            return Response({"detail": "Этот заказ сейчас нельзя оплатить"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            return Response({"url": build(order, lang)})
+        except PaymentUnavailable:
+            return Response(
+                {"detail": "Оплата этим способом временно недоступна — менеджер свяжется с вами"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )

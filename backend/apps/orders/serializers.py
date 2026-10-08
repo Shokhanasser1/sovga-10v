@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from apps.payments.links import configured_providers
+
 from .models import Order
 from .quote import CartItem, Quote
 from .state import CUSTOMER_CANCELLABLE
@@ -97,6 +99,8 @@ def order_payload(order: Order) -> dict:
         "address_landmark": order.address_landmark,
         "comment": order.comment,
         "can_cancel": order.status in CUSTOMER_CANCELLABLE,
+        "can_pay": order.status in (Order.Status.CONFIRMED, Order.Status.AWAITING_PAYMENT),
+        "pay_providers": configured_providers(),
         "lines": lines,
         "events": events,
     }
