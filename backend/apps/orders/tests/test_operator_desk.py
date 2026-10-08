@@ -118,6 +118,7 @@ def test_pick_page(admin_client, order):
     assert "Ташкент" in page and order.customer.phone in page
     assert "нужно ещё 2 IMEI" in page
     assert 'name="imei"' in page and "autofocus" in page
+    assert "Собирается <span" in page  # история: название статуса, а не пусто
 
 
 def test_start_picking_from_the_desk(admin_client, shop, units):

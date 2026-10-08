@@ -122,6 +122,18 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
             {order.address_text}
             {order.address_landmark && ` — ${order.address_landmark}`}
           </p>
+          {order.shipment && (
+            <p className={styles.delivery}>
+              {order.shipment.carrier === "own" ? (
+                <>
+                  {dict.deliveryCourier(order.shipment.courier_name)},{" "}
+                  <a href={`tel:${order.shipment.courier_phone}`}>{order.shipment.courier_phone}</a>
+                </>
+              ) : (
+                dict.deliveryService(order.shipment.service_name, order.shipment.tracking)
+              )}
+            </p>
+          )}
           {order.telegram === "linked" && <p className={forms.hint}>{dict.telegramLinked}</p>}
           <div className={styles.actions}>
             {order.telegram === "available" && (

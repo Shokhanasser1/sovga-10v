@@ -130,7 +130,7 @@
 <div class="desk-card" style="margin-top: 20px">
   <h2>История</h2>
   {% for event in events %}
-    <div>{{ event.created_at|date:"d.m H:i" }} — {{ event.get_status_to_display }}{% if event.note %} <span class="desk-muted">({{ event.note }})</span>{% endif %}</div>
+    <div>{{ event.at|date:"d.m H:i" }} — {{ event.status }}{% if event.note %} <span class="desk-muted">({{ event.note }})</span>{% endif %}</div>
   {% endfor %}
 </div>
 {% endblock %}

@@ -171,6 +171,15 @@ export const orderSchema = z.object({
   can_pay: z.boolean(),
   pay_providers: z.array(z.enum(["payme", "click"])),
   telegram: z.enum(["linked", "available", "off"]),
+  shipment: z
+    .object({
+      carrier: z.enum(["own", "service"]),
+      courier_name: z.string(),
+      courier_phone: z.string(),
+      service_name: z.string(),
+      tracking: z.string(),
+    })
+    .nullable(),
   lines: z.array(
     z.object({
       sku: z.string(),

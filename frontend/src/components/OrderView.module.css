@@ -39,6 +39,19 @@
   margin-top: 12px;
 }
 
+.delivery {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  background: var(--turquoise-tint);
+  color: var(--turquoise-ink);
+  font-weight: 600;
+}
+
+.delivery a {
+  color: inherit;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

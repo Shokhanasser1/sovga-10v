@@ -121,7 +121,10 @@ def pick_context(order: Order) -> dict:
         "handed": order.status == S.HANDED_TO_CARRIER,
         "can_cancel": order.status in CANCELLABLE,
         "paid": order.status not in (S.SOURCING, S.CONFIRMED, S.AWAITING_PAYMENT),
-        "events": order.events.order_by("-created_at")[:10],
+        "events": [
+            {"at": event.created_at, "status": S(event.status_to).label, "note": event.note}
+            for event in order.events.order_by("-created_at", "-pk")[:10]
+        ],
         "Z": InventoryUnit.UzimeiStatus,
     }
 
