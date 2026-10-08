@@ -159,6 +159,9 @@ class ProductModel(models.Model):
     is_accessory = models.BooleanField(default=False)
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
     search_text = models.TextField(blank=True, editable=False)
+    # Кэш для листинга, обновляет run_jobs: цена «от» и есть ли хоть что-то в продаже
+    price_from_uzs = models.PositiveBigIntegerField(null=True, blank=True, editable=False)
+    is_available = models.BooleanField(default=False, editable=False)
 
     def __str__(self) -> str:
         return self.name_ru

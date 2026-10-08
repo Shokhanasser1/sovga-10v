@@ -7,6 +7,7 @@ import requests
 from django.core.management import call_command
 from django.utils import timezone
 
+from apps.catalog.models import ProductModel
 from apps.pricing.models import ExchangeRate, MarkupRule, PriceSnapshot
 from apps.sourcing.models import Offer, Reservation
 
@@ -26,7 +27,10 @@ def test_run_jobs_updates_rate_prices_and_reservations(monkeypatch, variant, war
     call_command("run_jobs", stdout=StringIO(), stderr=StringIO())
 
     assert ExchangeRate.objects.filter(date=date(2026, 10, 8)).exists()
-    assert PriceSnapshot.objects.get(variant=variant).price_uzs > 0
+    snapshot = PriceSnapshot.objects.get(variant=variant)
+    assert snapshot.price_uzs > 0
+    product = ProductModel.objects.get(pk=variant.product_model_id)
+    assert (product.price_from_uzs, product.is_available) == (snapshot.price_uzs, True)
     assert Reservation.objects.get().released_at is not None
 
 
