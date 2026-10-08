@@ -2,11 +2,21 @@
 
 Схема: nginx (HTTPS) → Django через gunicorn на `127.0.0.1:8000` (API, админка, колбэки оплаты) и витрина Next.js на `127.0.0.1:3000`; Telegram-бот — отдельная служба; фоновые задачи — cron каждые 15 минут; база — PostgreSQL с ежедневной копией. Готовые файлы — в папке `deploy/`.
 
-## 0. Что нужно заранее
+## 0. Какой сервер
 
-- Сервер Ubuntu 24.04 (2 ядра, 4 ГБ памяти хватит на старт) — **в Узбекистане**: персональные данные граждан по закону хранятся в стране.
-- Домен, направленный на сервер (A-запись), например `sovga.uz`.
-- Ключи: Payme (касса и ключ), Click (service id, merchant id, секрет), коды входа (Telegram Gateway и/или Eskiz), **новый** токен Telegram-бота и его имя.
+**Учебный сервер — бесплатно и без ключей.** Учебный режим (`DEMO_MODE=true`) имитирует оплату, коды входа и Telegram, так что ключи не нужны. Подойдёт любой сервер с Ubuntu 24.04:
+
+- **Oracle Cloud Always Free** — виртуальная машина Ampere (ARM) до 4 ядер и 24 ГБ памяти, бесплатно без срока. Эта инструкция подходит целиком.
+- **Google Cloud Free Tier, e2-micro** (1 ГБ памяти) — подойдёт, если добавить подкачку, иначе сборке витрины не хватит памяти:
+  `sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile`.
+- **Компьютер в школе** + быстрый туннель Cloudflare (`cloudflared tunnel --url http://localhost:3000`, адрес вида `*.trycloudflare.com`) — на время урока или показа.
+
+Без своего домена — бесплатный поддомен (например, DuckDNS): HTTPS через certbot работает и с ним. Бесплатные тарифы «облачных платформ» с засыпающими сервисами и стираемым диском этому проекту не подходят: база и фоновые задачи должны жить постоянно.
+
+**Настоящий магазин** — дополнительно:
+- сервер **в Узбекистане**: персональные данные граждан по закону хранятся в стране;
+- свой домен;
+- ключи Payme, Click, кодов входа (Telegram Gateway и/или Eskiz), токен Telegram-бота и его имя; `DEMO_MODE=false`.
 
 ## 1. Пакеты
 
@@ -26,6 +36,8 @@ sudo -u sovga git clone <адрес репозитория> /srv/sovga
 
 ## 3. База
 
+Учебному серверу можно пропустить этот шаг: без `DATABASE_URL` база — файл `backend/db.sqlite3` (тогда в шаге 9 не нужна строка с копией PostgreSQL — копируйте сам файл). Для настоящего магазина — PostgreSQL:
+
 ```bash
 sudo -u postgres psql -c "CREATE USER sovga WITH PASSWORD '<длинный пароль>';"
 sudo -u postgres psql -c "CREATE DATABASE sovga OWNER sovga;"
@@ -33,7 +45,19 @@ sudo -u postgres psql -c "CREATE DATABASE sovga OWNER sovga;"
 
 ## 4. Настройки Django — `/srv/sovga/backend/.env`
 
-Начните с `backend/.env.example`. Обязательно для боевого режима:
+Начните с `backend/.env.example`. Учебный сервер:
+
+```
+DEBUG=false
+DEMO_MODE=true
+SECRET_KEY=<python3 -c "import secrets; print(secrets.token_urlsafe(50))">
+ALLOWED_HOSTS=<домен>,127.0.0.1
+CORS_ALLOWED_ORIGINS=https://<домен>
+SITE_URL=https://<домен>
+INTERNAL_API_TOKEN=<длинная случайная строка, та же — во frontend>
+```
+
+Настоящий магазин — `DEMO_MODE=false` и всё ниже:
 
 ```
 DEBUG=false
@@ -91,6 +115,8 @@ sudo systemctl enable --now sovga-api sovga-web sovga-bot
 systemctl status sovga-api sovga-web sovga-bot
 ```
 
+Учебный режим без токена бота: `sovga-bot` не включайте (`enable --now sovga-api sovga-web`) — бот работает в админке → «Имитация Telegram».
+
 Логи: `journalctl -u sovga-api -f` (так же `sovga-web`, `sovga-bot`).
 
 ## 8. nginx и HTTPS
@@ -120,6 +146,12 @@ sudo cp /srv/sovga/deploy/cron/sovga /etc/cron.d/sovga
 - Payme: адрес Merchant API — `https://<домен>/api/v1/payments/payme/`.
 - Click: Prepare — `https://<домен>/api/v1/payments/click/prepare/`, Complete — `https://<домен>/api/v1/payments/click/complete/`.
 - Сначала проверьте в песочницах (для Payme `PAYME_CHECKOUT_URL=https://test.paycom.uz`), потом переключите на боевые ключи.
+
+## Учебный сервер в открытом доступе
+
+- Вход по коду там открыт всем: код показывается на экране. Заказы и «оплаты» — учебные.
+- Учётные записи админки — только тем, кто развивает проект; пароль администратора не публикуйте.
+- Плашка «Учебный магазин» видна на каждой странице — с настоящим магазином его не спутать.
 
 ## 11. Первый день
 

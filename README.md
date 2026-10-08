@@ -12,6 +12,18 @@
 
 Docker не нужен: база по умолчанию SQLite, фоновые задачи — команда `run_jobs` по расписанию.
 
+Проект открытый и учебный (лицензия [MIT](LICENSE)): его можно запускать, менять и развивать — с чего начать, написано в [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Учебный режим — без единого ключа
+
+По умолчанию (`DEMO_MODE=true` в `backend\.env`) всё, для чего нужны ключи, имитируется — но работает тот же код, что с настоящими сервисами:
+
+- **Код входа** показывается на странице входа и подставляется сам.
+- **Оплата Payme и Click** — страница «Учебная оплата»: магазин получает те же запросы, что прислал бы настоящий провайдер. Можно оплатить, отказаться или «вернуть деньги».
+- **Telegram-бот** — админка → «Имитация Telegram»: сообщения бота поставщикам, покупателям и менеджерам, кнопки «Есть / Нет / Другая цена», ответы от имени любого чата.
+
+Настоящий ключ в `.env` всегда главнее имитации. Для настоящего магазина — `DEMO_MODE=false` и ключи.
+
 ## Запуск на Windows
 
 Нужны [Python 3.12+](https://www.python.org/downloads/) (при установке — галочка «Add python.exe to PATH») и [Node.js 20+](https://nodejs.org/).
@@ -27,7 +39,7 @@ scripts\start.cmd
 - `setup.cmd` — один раз: зависимости, `backend\.env` со своим секретным ключом, база, демо-каталог, сборка витрины.
 - `start.cmd` — каждый раз: открывает окна API, витрины и (если в `backend\.env` есть токен) бота.
 - Витрина — http://localhost:3000, админка — http://localhost:8000/admin, рабочее место оператора — в меню админки.
-- Код входа: пока не настроены Telegram Gateway или Eskiz, он печатается в окне «Sovga — API».
+- Код входа в учебном режиме — на странице входа (без учебного режима и без ключей — в окне «Sovga — API»).
 - Фоновые задачи (прайсы, курс ЦБ, цены, просрочки, уведомления): вручную — `scripts\jobs.cmd`; по расписанию каждые 15 минут —
   `schtasks /create /tn "Sovga run_jobs" /sc minute /mo 15 /tr "\"C:\путь\к\проекту\scripts\jobs.cmd\""`.
 - Разработка витрины с мгновенным обновлением: в `frontend` — `npm run dev` вместо окна витрины.
@@ -49,8 +61,8 @@ npx tsc --noEmit
 npm run lint
 ```
 
-Сквозная проверка в браузере (`e2e\storefront_check.py`, нужен `pip install playwright` и `playwright install chromium`): запустите API с переменными `DEBUG=true OTP_FIXED_CODE=000000 PAYME_MERCHANT_ID=e2e PAYME_KEY=e2e-payme-key TELEGRAM_BOT_TOKEN=e2e TELEGRAM_BOT_USERNAME=sovga_e2e_bot`, витрину (`npm start`) и выполните `python e2e\storefront_check.py`.
+Сквозная проверка в браузере — покупка от поиска до оплаты и возврата (нужны `pip install playwright` и `playwright install chromium`): запустите `scripts\start.cmd` (учебный режим, ключи не нужны) и выполните `python e2e\storefront_check.py`.
 
 ## Боевой запуск
 
-Пошагово — в [docs/deploy.md](docs/deploy.md): сервер Ubuntu в Узбекистане, PostgreSQL, HTTPS, службы, расписание, копии базы, настройки кабинетов Payme и Click.
+Пошагово — в [docs/deploy.md](docs/deploy.md): бесплатный учебный сервер (Oracle Cloud Always Free, Google Cloud e2-micro или компьютер в школе) или настоящий магазин — HTTPS, службы, расписание, копии базы, кабинеты Payme и Click.
