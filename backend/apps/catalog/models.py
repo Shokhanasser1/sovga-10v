@@ -17,6 +17,7 @@ class Category(models.Model):
     is_serialized = models.BooleanField(
         default=False, help_text="Поштучный учёт по IMEI/SN (телефоны, планшеты)"
     )
+    warranty_months = models.PositiveSmallIntegerField(default=12, help_text="Срок гарантии, месяцев с продажи")
 
     class Meta:
         verbose_name_plural = "categories"

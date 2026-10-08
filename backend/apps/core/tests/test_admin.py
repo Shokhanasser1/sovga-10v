@@ -15,6 +15,7 @@ EDITABLE = [
     "sourcing.supplierskumap",
     "inventory.purchasebatch",
     "inventory.inventoryunit",
+    "warranty.warrantycase",
 ]
 READ_ONLY = [
     "sourcing.supplierfeedrun",

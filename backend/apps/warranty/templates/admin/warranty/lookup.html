@@ -1,0 +1,52 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/orders/desk_styles.html" %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">Начало</a> ›
+  <a href="{% url 'admin:warranty_warrantycase_changelist' %}">Гарантийные случаи</a> › Гарантия по IMEI
+</div>
+{% endblock %}
+
+{% block content %}
+<form class="desk-search" method="get">
+  <input name="imei" value="{{ query }}" placeholder="IMEI или серийный номер" maxlength="64" autofocus>
+  <button type="submit" class="button">Найти</button>
+</form>
+
+{% if query and not info %}
+  <p class="desk-problems">Проданное устройство «{{ query }}» не найдено — проверьте номер.</p>
+{% endif %}
+
+{% if info %}
+  <div class="desk-card">
+    <h2>{{ info.title }}</h2>
+    <p>IMEI {{ info.unit.imei1 }}{% if info.unit.imei2 %} / {{ info.unit.imei2 }}{% endif %}</p>
+    <p>Заказ: {% if info.order %}<a href="{% url 'admin:orders_operatordesk_pick' info.order.number %}">{{ info.order.number }}</a>, покупатель {{ info.customer_phone }}{% else %}—{% endif %}</p>
+    <p>Продано: {{ info.sold_at|date:"d.m.Y" }} · Гарантия до: <strong>{{ info.until|date:"d.m.Y" }}</strong>
+      {% if active %}<span class="desk-ok">— действует</span>{% else %}<span class="desk-late">— закончилась</span>{% endif %}</p>
+    <p class="desk-muted">Куплено у: {{ info.source }}</p>
+    {% if info.cases %}
+      <h2>Прошлые обращения</h2>
+      {% for case in info.cases %}
+        <div><a href="{% url 'admin:warranty_warrantycase_change' case.pk %}">{{ case.opened_at|date:"d.m.Y" }}</a>
+          — {{ case.complaint }} <span class="desk-muted">({{ case.get_status_display|lower }})</span></div>
+      {% endfor %}
+    {% endif %}
+  </div>
+
+  {% if error %}<p class="desk-problems">{{ error }}</p>{% endif %}
+  {% if active %}
+    <div class="desk-card">
+      <h2>Открыть гарантийный случай</h2>
+      <form class="desk-ship" method="post">
+        {% csrf_token %}<input type="hidden" name="imei" value="{{ query }}">
+        <label>Неисправность со слов покупателя <input name="complaint" maxlength="500" required></label>
+        <label>Сервисный центр <input name="service_center" maxlength="200"></label>
+        <div><button type="submit" class="button default">Открыть случай</button></div>
+      </form>
+    </div>
+  {% endif %}
+{% endif %}
+{% endblock %}

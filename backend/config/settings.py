@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "apps.payments",
     "apps.bot",
     "apps.delivery",
+    "apps.warranty",
 ]
 
 MIDDLEWARE = [

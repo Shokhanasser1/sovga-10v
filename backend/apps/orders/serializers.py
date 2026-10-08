@@ -1,8 +1,11 @@
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.delivery.models import Shipment
+from apps.inventory.models import InventoryUnit
 from apps.notifications.telegram import bot_available
 from apps.payments.links import configured_providers
+from apps.warranty.services import add_months
 
 from .models import Order
 from .quote import CartItem, Quote
@@ -73,6 +76,7 @@ def quote_payload(result: Quote) -> dict:
 
 def order_payload(order: Order) -> dict:
     """Только то, что нужно покупателю: без себестоимости, источников и резервов."""
+    shipment = Shipment.objects.filter(order=order).first()
     lines = [
         {
             "sku": line.variant.sku,
@@ -83,14 +87,19 @@ def order_payload(order: Order) -> dict:
             "price_uzs": line.price_uzs,
             "is_gift": line.is_gift,
             "axes": line.variant.axes,
+            "devices": [
+                {"imei": unit.imei1, "warranty_until": timezone.localdate(
+                    add_months(shipment.handed_at, line.variant.product_model.category.warranty_months)
+                ).isoformat()}
+                for unit in line.units.filter(status=InventoryUnit.State.SOLD).order_by("pk")
+            ] if shipment else [],
         }
-        for line in order.lines.select_related("variant__product_model")
+        for line in order.lines.select_related("variant__product_model__category")
     ]
     events = [
         {"status": event.status_to, "note": event.note, "at": event.created_at.isoformat()}
         for event in order.events.all()
     ]
-    shipment = Shipment.objects.filter(order=order).first()
     return {
         "number": order.number,
         "status": order.status,
