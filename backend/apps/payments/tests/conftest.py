@@ -9,6 +9,7 @@ from apps.orders.services import DeliveryAddress, create_order
 from apps.orders.tests.conftest import shop  # noqa: F401 — фикстура магазина
 
 NOW = timezone.now()
+MXIK_CODE = "08517001001000000"  # из корневого conftest
 
 
 @pytest.fixture

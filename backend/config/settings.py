@@ -142,3 +142,18 @@ if OTP_FIXED_CODE and not DEBUG:
 # Telegram-бот: уведомления менеджерам (новый заказ и т. п.). Токен — только из окружения.
 TELEGRAM_BOT_TOKEN = env("TELEGRAM_BOT_TOKEN", default="")
 MANAGER_CHAT_IDS = env.list("MANAGER_CHAT_IDS", default=[])
+
+# Payme: касса и ключ (тестовый ключ — для test.paycom.uz). Без ключа вызовы Payme отклоняются.
+PAYME_MERCHANT_ID = env("PAYME_MERCHANT_ID", default="")
+PAYME_KEY = env("PAYME_KEY", default="")
+PAYME_ACCOUNT_FIELD = env("PAYME_ACCOUNT_FIELD", default="order_id")
+PAYME_CHECKOUT_URL = env("PAYME_CHECKOUT_URL", default="https://checkout.paycom.uz")
+# Click: сервис, мерчант и секрет для подписи
+CLICK_SERVICE_ID = env("CLICK_SERVICE_ID", default="")
+CLICK_MERCHANT_ID = env("CLICK_MERCHANT_ID", default="")
+CLICK_SECRET_KEY = env("CLICK_SECRET_KEY", default="")
+CLICK_PAY_URL = env("CLICK_PAY_URL", default="https://my.click.uz/services/pay")
+# НДС в фискальном чеке, % (уточнить у бухгалтера)
+FISCAL_VAT_PERCENT = env.int("FISCAL_VAT_PERCENT", default=12)
+# Адрес витрины — для возврата покупателя после оплаты
+SITE_URL = env("SITE_URL", default="http://localhost:3000")
