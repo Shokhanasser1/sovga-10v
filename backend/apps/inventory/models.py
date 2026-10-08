@@ -47,6 +47,10 @@ class InventoryUnit(models.Model):
     )
     cost_usd = models.DecimalField(max_digits=12, decimal_places=2)
     status = models.CharField(max_length=10, choices=State.choices, default=State.IN_STOCK)
+    order_line = models.ForeignKey(
+        "orders.OrderLine", null=True, blank=True, on_delete=models.SET_NULL, related_name="units",
+        help_text="Строка заказа, под которую собрано или продано устройство",
+    )
     received_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
