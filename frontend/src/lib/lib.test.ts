@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { apiUrl } from "./api-client";
 import { COMPARE_KEY, addToCompare, readCompare, removeFromCompare, type CompareItem } from "./compare-store";
 import { deliveryText, formatPriceFrom, formatSum, formatValue } from "./format";
 import { getDictionary, isLocale, localized, pluralRu, switchLocalePath } from "./i18n";
@@ -111,5 +112,17 @@ describe("compare store", () => {
 
     store.setItem(COMPARE_KEY, JSON.stringify([{ sku: 1 }]));
     expect(readCompare(store)).toEqual([]);
+  });
+});
+
+describe("apiUrl", () => {
+  it("joins base, path and query without double slashes", () => {
+    expect(apiUrl("/api/v1/catalog/compare/", { skus: "A,B", lang: "uz" }, "http://127.0.0.1:8000/")).toBe(
+      "http://127.0.0.1:8000/api/v1/catalog/compare/?skus=A%2CB&lang=uz",
+    );
+  });
+
+  it("uses a relative URL when the base is empty (production behind nginx)", () => {
+    expect(apiUrl("/api/v1/pricing/products/x/", undefined, "")).toBe("/api/v1/pricing/products/x/");
   });
 });
