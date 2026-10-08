@@ -120,6 +120,47 @@
   </div>
 {% endif %}
 
+{% if can_return %}
+  <div class="desk-card">
+    <h2>Оформить возврат</h2>
+    <p class="desk-muted">Можно до {{ return_deadline|date:"d.m.Y H:i" }}. Позже — только гарантийный случай.</p>
+    <form class="desk-ship" method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'return_open' %}">
+      {% csrf_token %}
+      <label>Причина <input name="reason" maxlength="300" required></label>
+      <div><button type="submit" class="button default">Оформить возврат</button></div>
+    </form>
+  </div>
+{% endif %}
+
+{% if returning %}
+  <div class="desk-card desk-return">
+    <h2>Приёмка возврата</h2>
+    <p>Причина: {{ return_request.reason }}</p>
+    <form class="desk-ship" method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'return_inspect' %}">
+      {% csrf_token %}
+      <label>IMEI принесённых устройств — по одному в строке (сканер)
+        <textarea name="imeis" autofocus></textarea></label>
+      <label><span><input type="checkbox" name="gift_returned"> подарок вернули — иначе его цена удерживается</span></label>
+      <div><button type="submit" class="button default">Сверить и принять</button></div>
+    </form>
+    <form class="desk-ship" style="margin-top: 16px" method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'return_reject' %}">
+      {% csrf_token %}
+      <label>Отказать в возврате — причина <input name="note" maxlength="300" required></label>
+      <div><button type="submit" class="button desk-danger">Отказать</button></div>
+    </form>
+  </div>
+{% endif %}
+
+{% if inspected %}
+  <div class="desk-card">
+    <h2>Вернуть деньги</h2>
+    <p>Верните покупателю <strong>{{ return_refund }}&nbsp;сум</strong> в кабинете Payme / Click, затем отметьте здесь.</p>
+    <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'return_refund' %}">
+      {% csrf_token %}<button type="submit" class="button default">Деньги возвращены</button>
+    </form>
+  </div>
+{% endif %}
+
 {% if can_cancel %}
   <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'cancel' %}"
         onsubmit="return confirm('Отменить заказ {{ order.number }}?{% if paid %} Деньги покупателю нужно вернуть в кабинете Payme / Click.{% endif %}')">

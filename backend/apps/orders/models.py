@@ -58,6 +58,9 @@ class OrderLine(models.Model):
     offer = models.ForeignKey(Offer, null=True, blank=True, on_delete=models.SET_NULL)
     reservation = models.ForeignKey(Reservation, null=True, blank=True, on_delete=models.SET_NULL)
     is_gift = models.BooleanField(default=False)
+    gift_value_uzs = models.PositiveBigIntegerField(
+        default=0, help_text="У подарка — его цена за штуку на момент заказа: удерживается, если подарок не вернули"
+    )
     gift_for = models.ForeignKey(
         "self", null=True, blank=True, on_delete=models.CASCADE, related_name="gifts"
     )
@@ -120,3 +123,30 @@ class OperatorDesk(Order):
         proxy = True
         verbose_name = "рабочее место оператора"
         verbose_name_plural = "рабочее место оператора"
+
+
+class ReturnRequest(models.Model):
+    """Возврат доставленного заказа: приёмка со сверкой IMEI, затем возврат денег."""
+
+    class Status(models.TextChoices):
+        REQUESTED = "requested", "Ждём товар"
+        ACCEPTED = "accepted", "Принят — вернуть деньги"
+        REJECTED = "rejected", "Отказ"
+        REFUNDED = "refunded", "Деньги возвращены"
+
+    order = models.ForeignKey(Order, on_delete=models.PROTECT, related_name="returns")
+    reason = models.CharField(max_length=300)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.REQUESTED)
+    imeis_received = models.JSONField(default=list, blank=True)
+    gift_returned = models.BooleanField(null=True, blank=True)
+    refund_amount_uzs = models.PositiveBigIntegerField(null=True, blank=True)
+    note = models.CharField(max_length=300, blank=True)
+    created_at = models.DateTimeField()
+    inspected_at = models.DateTimeField(null=True, blank=True)
+    refunded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-pk"]
+
+    def __str__(self) -> str:
+        return f"Возврат {self.order}"

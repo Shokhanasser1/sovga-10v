@@ -63,7 +63,7 @@ def _reserve_line(order: Order, line: QuoteLine, now: datetime) -> tuple[OrderLi
         OrderLine.objects.create(
             order=order, variant=gift_variant, qty=line.qty, price_uzs=0,
             cost_usd=gift_reservation.offer.cost_usd, offer=gift_reservation.offer,
-            reservation=gift_reservation, is_gift=True, gift_for=main,
+            reservation=gift_reservation, is_gift=True, gift_for=main, gift_value_uzs=line.gift.price_uzs,
         )
     return main, _needs_supplier_confirmation(reservation.offer)
 

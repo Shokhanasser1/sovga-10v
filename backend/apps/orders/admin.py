@@ -10,7 +10,7 @@ from apps.delivery.models import Shipment
 from apps.payments.admin import PaymentInline
 
 from . import desk
-from .models import OperatorDesk, Order, OrderEvent, OrderLine, SupplierRequest
+from .models import OperatorDesk, Order, OrderEvent, OrderLine, ReturnRequest, SupplierRequest
 from .services import OrderError, cancel_order, confirm_sourcing
 
 
@@ -60,6 +60,18 @@ class ShipmentInline(admin.StackedInline):
         return False
 
 
+class ReturnRequestInline(admin.StackedInline):
+    model = ReturnRequest
+    extra = 0
+    can_delete = False
+    fields = ("status", "reason", "imeis_received", "gift_returned", "refund_amount_uzs", "note", "created_at",
+              "inspected_at", "refunded_at")
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     """Статус меняется только действиями — через машину состояний, с записью в историю."""
@@ -67,7 +79,9 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ("number", "customer", "status", "total_uzs", "created_at", "sla_deadline")
     list_filter = ("status", "payment_method")
     search_fields = ("number", "customer__phone")
-    inlines = [OrderLineInline, SupplierRequestInline, PaymentInline, ShipmentInline, OrderEventInline]
+    inlines = [
+        OrderLineInline, SupplierRequestInline, PaymentInline, ShipmentInline, ReturnRequestInline, OrderEventInline,
+    ]
     actions = ["confirm_sourcing_action", "cancel_action"]
 
     def get_readonly_fields(self, request, obj=None):
@@ -138,15 +152,22 @@ class OperatorDeskAdmin(admin.ModelAdmin):
         return TemplateResponse(request, template, context)
 
     def changelist_view(self, request, extra_context=None):
+        if not self._allowed(request):
+            raise PermissionDenied
         now = timezone.now()
+        query = request.GET.get("q", "").strip()[:40]
+        found = desk.find_orders(query) if query else []
+        if len(found) == 1:
+            return redirect(reverse("admin:orders_operatordesk_pick", args=[found[0].number]))
         return self._render(request, "admin/orders/operator_desk.html", {
             "title": "Рабочее место оператора", "sections": desk.sections(now), "now": now,
+            "query": query, "found": found,
         })
 
     def pick_view(self, request, number: str):
         order = get_object_or_404(Order.objects.select_related("customer"), number=number)
         return self._render(request, "admin/orders/operator_pick.html", {
-            "title": f"Заказ {order.number}", **desk.pick_context(order),
+            "title": f"Заказ {order.number}", **desk.pick_context(order, timezone.now()),
         })
 
     def action_view(self, request, number: str, action: str):

@@ -8,7 +8,22 @@
 {% endblock %}
 
 {% block content %}
-<p class="desk-muted">Страница обновляется каждую минуту. Сейчас {{ now|date:"H:i" }}.</p>
+<form class="desk-search" method="get">
+  <input name="q" value="{{ query }}" placeholder="Номер заказа или телефон покупателя" maxlength="40">
+  <button type="submit" class="button">Найти</button>
+  <span class="desk-muted">Страница обновляется каждую минуту. Сейчас {{ now|date:"H:i" }}.</span>
+</form>
+{% if query %}
+  <section class="desk-section">
+    <h2>Найдено по «{{ query }}»</h2>
+    {% for order in found %}
+      <div><a href="{% url 'admin:orders_operatordesk_pick' order.number %}"><strong>{{ order.number }}</strong></a>
+        — {{ order.get_status_display }}, {{ order.customer.phone }}, {{ order.created_at|date:"d.m.Y" }}</div>
+    {% empty %}
+      <p class="desk-muted">Ничего не найдено</p>
+    {% endfor %}
+  </section>
+{% endif %}
 {% for section in sections %}
   <section class="desk-section">
     <h2>{{ section.title }} <span class="desk-count">{{ section.rows|length }}</span></h2>
@@ -38,6 +53,8 @@
                   </form>
                 {% elif section.key == "picking" %}
                   <a class="button" href="{% url 'admin:orders_operatordesk_pick' row.order.number %}">Собрать</a>
+                {% elif section.key == "returns" %}
+                  <a class="button" href="{% url 'admin:orders_operatordesk_pick' row.order.number %}">Открыть</a>
                 {% endif %}
               </td>
             </tr>

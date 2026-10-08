@@ -5,6 +5,7 @@ from django.utils import timezone
 
 from apps.catalog.search import rebuild_search_index
 from apps.notifications.outbox import deliver_pending
+from apps.orders.returns import complete_delivered
 from apps.orders.services import expire_orders
 from apps.orders.supplier_requests import alert_silent_requests
 from apps.pricing.listing import refresh_listing_cache
@@ -39,6 +40,7 @@ class Command(BaseCommand):
                 self.stderr.write("Нет правила наценки для: " + ", ".join(result.missing_rule))
         self.stdout.write(f"Отменено просроченных заказов: {expire_orders(now)}")
         self.stdout.write(f"Поставщики молчат 30 минут: {alert_silent_requests(now)}")
+        self.stdout.write(f"Завершено доставленных (срок возврата истёк): {complete_delivered(now)}")
         self.stdout.write(f"Снято просроченных резервов: {release_expired(now)}")
         self.stdout.write(f"Поисковый индекс: {rebuild_search_index()} товаров")
         self.stdout.write(f"Кэш листинга: {refresh_listing_cache(now)} товаров")

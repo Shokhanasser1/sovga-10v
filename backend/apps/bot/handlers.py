@@ -53,9 +53,13 @@ def ask_supplier(payload: dict) -> None:
 
 
 def _is_quiet(previous: str | None, status: str) -> bool:
-    """Технические шаги оплаты покупателю не пишем: он сам только что был на странице оплаты."""
+    """Не пишем технические шаги оплаты (покупатель сам на странице оплаты) и «Завершён» по истечении срока возврата."""
     S = Order.Status
-    return status == S.AWAITING_PAYMENT or (status == S.CONFIRMED and previous == S.AWAITING_PAYMENT)
+    return (
+        status == S.AWAITING_PAYMENT
+        or (status == S.CONFIRMED and previous == S.AWAITING_PAYMENT)
+        or (status == S.COMPLETED and previous == S.DELIVERED)
+    )
 
 
 def status_text(order: Order, previous: str | None, status: str, note: str) -> str:
@@ -77,6 +81,8 @@ def status_text(order: Order, previous: str | None, status: str, note: str) -> s
             lines.append(words["refund"])
         if note and words["reason"]:  # причины записаны по-русски — узбекским покупателям не показываем
             lines.append(words["reason"].format(note=note))
+    elif status in (S.RETURN_REQUESTED, S.INSPECTED, S.REFUNDED, S.COMPLETED) and note and words["reason"]:
+        lines.append(note)  # «Причина: …», «К возврату … сум», «Деньги возвращены: … сум»
     lines.append(f"{settings.SITE_URL.rstrip('/')}/{language}/orders/{order.number}")
     return "\n".join(lines)
 

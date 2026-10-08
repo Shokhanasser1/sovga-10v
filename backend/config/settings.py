@@ -161,3 +161,5 @@ CLICK_PAY_URL = env("CLICK_PAY_URL", default="https://my.click.uz/services/pay")
 FISCAL_VAT_PERCENT = env.int("FISCAL_VAT_PERCENT", default=12)
 # Адрес витрины — для возврата покупателя после оплаты
 SITE_URL = env("SITE_URL", default="http://localhost:3000")
+# Срок возврата товара надлежащего качества, дней с доставки (точный срок — вопрос юристу)
+RETURN_DAYS = env.int("RETURN_DAYS", default=10)

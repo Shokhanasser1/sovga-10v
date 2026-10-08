@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 import pytest
 
 from apps.bot.links import customer_link, redeem
@@ -28,7 +30,7 @@ def order_for(customer) -> Order:
 
 
 def messages(telegram) -> list[str]:
-    deliver_pending(NOW)
+    deliver_pending(NOW + timedelta(days=365))  # всё, что уже записано, — к отправке
     return telegram.sent(CHAT)
 
 
@@ -114,3 +116,40 @@ def test_courier_details_reach_the_customer(linked, telegram, shop):
 
     deliver(order, NOW, actor="manager:anna")
     assert "Доставлен" in messages(telegram)[-1]
+
+
+def test_return_messages(linked, telegram, shop, settings):
+    from datetime import timedelta
+    from decimal import Decimal
+
+    from apps.delivery.carriers import Handover
+    from apps.inventory.imei import with_check_digit
+    from apps.inventory.services import receive_unit
+    from apps.orders.fulfilment import add_unit, deliver, ship, start_picking
+    from apps.orders.returns import complete_delivered, inspect_return, open_return, refund_return
+
+    settings.RETURN_DAYS = 10
+    devices = [with_check_digit(f"3569380356000{n}") for n in (1, 2)]
+    for device in devices:
+        receive_unit(variant=shop["phone"], warehouse=shop["warehouse"], cost_usd=Decimal("1000"), imei1=device)
+    first, second = order_for(linked), order_for(linked)
+    for order, device in ((first, devices[0]), (second, devices[1])):
+        start_payment(order, NOW, actor="payme")
+        confirm_payment(order, NOW, actor="payme", provider="Payme")
+        start_picking(order, NOW, actor="manager:anna")
+        add_unit(order.lines.get(), device, NOW, actor="manager:anna", uzimei_registered=True)
+        ship(order, "own", Handover(courier_name="Азиз", courier_phone="901234567"), NOW, actor="manager:anna")
+        deliver(order, NOW, actor="manager:anna")
+    messages(telegram)
+    sent_before = len(telegram.sent(CHAT))
+
+    assert complete_delivered(NOW + timedelta(days=11)) == 2
+    assert len(messages(telegram)) == sent_before  # «Завершён» по сроку — без сообщения
+
+    first.refresh_from_db()
+    open_return(first, "Не подошёл", NOW + timedelta(days=1), actor="manager:anna")
+    assert "Причина: Не подошёл" in messages(telegram)[-1]
+    inspect_return(first, [devices[0]], gift_returned=True, now=NOW, actor="manager:anna")
+    assert "К возврату 14 080 000 сум" in messages(telegram)[-1]
+    refund_return(first, NOW, actor="manager:anna")
+    assert "Деньги возвращены: 14 080 000 сум" in messages(telegram)[-1]

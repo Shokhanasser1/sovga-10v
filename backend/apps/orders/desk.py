@@ -1,8 +1,9 @@
 """Рабочее место оператора: очередь заказов по этапам с таймерами и действия над заказом."""
 
+import re
 from datetime import datetime, timedelta
 
-from django.db.models import OuterRef, Subquery
+from django.db.models import OuterRef, Q, Subquery
 from django.http import Http404
 
 from apps.catalog.labels import variant_title
@@ -10,7 +11,8 @@ from apps.delivery.carriers import Handover
 from apps.inventory.models import InventoryUnit
 
 from .fulfilment import PICKABLE, add_unit, deliver, mark_uzimei, picking_problems, remove_unit, ship, start_picking
-from .models import Order, OrderEvent, OrderLine
+from .models import Order, OrderEvent, OrderLine, ReturnRequest
+from .returns import inspect_return, money, open_return, refund_return, reject_return, return_deadline
 from .services import cancel_order, confirm_sourcing
 from .state import CANCELLABLE
 
@@ -25,6 +27,7 @@ STAGES = [
     ("to_pick", "Оплачены — собрать", tuple(PICKABLE), "pick_deadline", ("start", "Начать сборку")),
     ("picking", "Собираются", (S.PICKING,), "pick_deadline", None),
     ("carrier", "У курьера", (S.HANDED_TO_CARRIER,), None, ("deliver", "Доставлен")),
+    ("returns", "Возвраты", (S.RETURN_REQUESTED, S.INSPECTED), None, None),
 ]
 
 
@@ -96,7 +99,16 @@ def sections(now: datetime) -> list[dict]:
     return result
 
 
-def pick_context(order: Order) -> dict:
+def find_orders(query: str) -> list[Order]:
+    """Поиск для оператора: номер заказа целиком или телефон покупателя (хватит последних 7–9 цифр)."""
+    digits = re.sub(r"\D", "", query)
+    condition = Q(number__iexact=query.strip())
+    if len(digits) >= 7:
+        condition |= Q(customer__phone__endswith=digits[-9:])
+    return list(Order.objects.filter(condition).select_related("customer").order_by("-created_at")[:20])
+
+
+def pick_context(order: Order, now: datetime) -> dict:
     lines = []
     for line in order.lines.select_related("variant__product_model__category").order_by("pk"):
         units = list(line.units.order_by("pk"))
@@ -126,6 +138,20 @@ def pick_context(order: Order) -> dict:
             for event in order.events.order_by("-created_at", "-pk")[:10]
         ],
         "Z": InventoryUnit.UzimeiStatus,
+        **_return_context(order, now),
+    }
+
+
+def _return_context(order: Order, now: datetime) -> dict:
+    deadline = return_deadline(order)
+    request = ReturnRequest.objects.filter(order=order).first()
+    return {
+        "can_return": order.status in (S.DELIVERED, S.COMPLETED) and deadline is not None and now <= deadline,
+        "return_deadline": deadline,
+        "return_request": request,
+        "return_refund": money(request.refund_amount_uzs) if request and request.refund_amount_uzs is not None else "",
+        "returning": order.status == S.RETURN_REQUESTED,
+        "inspected": order.status == S.INSPECTED,
     }
 
 
@@ -183,6 +209,21 @@ def perform(order: Order, action: str, data, now: datetime, actor: str) -> tuple
     if action == "deliver":
         deliver(order, now, actor)
         return f"Заказ {order.number} доставлен", "desk"
+    if action == "return_open":
+        open_return(order, data.get("reason", ""), now, actor)
+        return "Возврат оформлен — ждём товар", "pick"
+    if action == "return_inspect":
+        imeis = re.split(r"[\s,;]+", data.get("imeis", ""))
+        request = inspect_return(order, imeis, data.get("gift_returned") == "on", now, actor)
+        if request.status == ReturnRequest.Status.REJECTED:
+            return "IMEI не совпадает с проданными — возврат отклонён", "pick"
+        return f"Возврат принят. Верните покупателю {money(request.refund_amount_uzs)} сум в кабинете Payme / Click", "pick"
+    if action == "return_reject":
+        reject_return(order, data.get("note", ""), now, actor)
+        return "Возврат отклонён", "pick"
+    if action == "return_refund":
+        refund_return(order, now, actor)
+        return f"Заказ {order.number}: деньги возвращены", "pick"
     if action == "cancel":
         cancel_order(order, now, actor, "Отменён оператором")
         return f"Заказ {order.number} отменён", "desk"
