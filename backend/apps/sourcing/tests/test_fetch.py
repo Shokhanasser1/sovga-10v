@@ -141,3 +141,29 @@ def test_too_many_rows_are_refused(monkeypatch, name, data):
 
     with pytest.raises(ValueError, match="строк"):
         read_bytes(name, data())
+
+
+def test_rows_before_the_header_count_too(monkeypatch):
+    import io
+
+    from apps.sourcing import feeds
+    from apps.sourcing.fetch import read_bytes
+
+    monkeypatch.setattr(feeds, "MAX_ROWS", 5)
+    monkeypatch.setattr(feeds, "HEADER_SLACK", 3)
+    workbook = Workbook()
+    for _ in range(20):
+        workbook.active.append(["заметка"])  # одна ячейка — не заголовок, раньше не считалась вовсе
+    workbook.active.append(["Артикул", "Цена", "Остаток"])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+
+    with pytest.raises(ValueError, match="строк"):
+        read_bytes("price.xlsx", buffer.getvalue())
+
+
+def test_broken_csv_is_a_value_error():
+    from apps.sourcing.feeds import read_csv
+
+    with pytest.raises(ValueError):
+        read_csv("Артикул,Цена\n" + '"' + "x" * 200_000 + '",1\n')

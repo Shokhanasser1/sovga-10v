@@ -16,6 +16,8 @@ MAX_QTY = 1_000_000
 # Прайс приходит и от поставщиков в бот — защита от «zip-бомб» и бесконечных таблиц.
 MAX_UNPACKED_BYTES = 50 * 1024 * 1024
 MAX_ROWS = 20_000
+HEADER_SLACK = 50  # пустые строки и шапка до заголовка — тоже строки, их считаем
+MAX_COLUMNS = 100
 
 
 @dataclass(frozen=True)
@@ -96,10 +98,13 @@ def read_csv(text: str) -> list[dict]:
     delimiter = max([",", ";", "\t"], key=header.count)
     reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
     records = []
-    for row in reader:
-        if len(records) >= MAX_ROWS:
-            raise ValueError(f"В прайсе больше {MAX_ROWS} строк")
-        records.append({key: value for key, value in row.items() if key is not None})
+    try:
+        for row in reader:
+            if len(records) >= MAX_ROWS:
+                raise ValueError(f"В прайсе больше {MAX_ROWS} строк")
+            records.append({key: value for key, value in row.items() if key is not None})
+    except csv.Error as error:
+        raise ValueError(f"CSV не читается: {error}") from None
     return records
 
 
@@ -116,7 +121,9 @@ def read_xlsx(source) -> list[dict]:
     try:
         header: list[str] | None = None
         records = []
-        for values in workbook.active.iter_rows(values_only=True):
+        for scanned, values in enumerate(workbook.active.iter_rows(values_only=True, max_col=MAX_COLUMNS)):
+            if scanned >= MAX_ROWS + HEADER_SLACK:
+                raise ValueError(f"В прайсе больше {MAX_ROWS} строк")
             filled = [value for value in values if value not in (None, "")]
             if header is None:
                 if len(filled) >= 2:
