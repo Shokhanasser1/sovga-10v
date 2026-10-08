@@ -46,6 +46,7 @@ def test_quote_is_public(shop):
     [line] = body["lines"]
     assert line["gift_budget_uzs"] == 128_000
     assert [option["sku"] for option in line["gift_options"]] == ["CASE-1"]
+    assert line["gift_options"][0]["axes"] == {}
     assert "cost_usd" not in str(body)
 
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ApiClientError, cancelOrder, fetchOrder } from "@/lib/api-client";
-import { formatSum } from "@/lib/format";
+import { formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/navigation";
 import type { Order } from "@/lib/schemas";
@@ -68,10 +68,11 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
           {order.lines.map((line) => (
             <div key={`${line.sku}-${line.is_gift}`} className={forms.summaryLine}>
               <span>
-                <Link href={`/${lang}/product/${line.slug}`}>{localized(line, lang)}</Link> × {line.qty}
+                <Link href={`/${lang}/product/${line.slug}`}>{withVariant(localized(line, lang), line.axes, lang)}</Link> ×{" "}
+                {line.qty}
                 {line.is_gift && <span className={styles.giftBadge}>{dict.giftLabel}</span>}
               </span>
-              <span className="price">{line.is_gift ? "0" : formatSum(line.price_uzs * line.qty, lang)}</span>
+              <span className="price">{line.is_gift ? dict.free : formatSum(line.price_uzs * line.qty, lang)}</span>
             </div>
           ))}
           <p className={forms.total}>

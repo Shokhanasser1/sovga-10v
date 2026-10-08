@@ -33,6 +33,7 @@ class GiftOption:
     name_ru: str
     name_uz: str
     price_uzs: int
+    axes: dict = field(default_factory=dict, hash=False, compare=False)
 
 
 @dataclass
@@ -99,7 +100,7 @@ def gift_options(variant: Variant, budget: int, qty: int, now: datetime) -> list
         if offer is None or not offer.is_own:
             continue
         product = gift.product_model
-        options.append(GiftOption(gift.sku, product.name_ru, product.name_uz, snapshot.price_uzs))
+        options.append(GiftOption(gift.sku, product.name_ru, product.name_uz, snapshot.price_uzs, gift.axes))
     return sorted(options, key=lambda option: (-option.price_uzs, option.sku))
 
 

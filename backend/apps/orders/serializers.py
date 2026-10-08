@@ -38,7 +38,10 @@ class OrderCreateSerializer(QuoteRequestSerializer):
 def _gift(option) -> dict | None:
     if option is None:
         return None
-    return {"sku": option.sku, "name_ru": option.name_ru, "name_uz": option.name_uz, "price_uzs": option.price_uzs}
+    return {
+        "sku": option.sku, "name_ru": option.name_ru, "name_uz": option.name_uz,
+        "price_uzs": option.price_uzs, "axes": option.axes,
+    }
 
 
 def quote_payload(result: Quote) -> dict:
@@ -75,6 +78,7 @@ def order_payload(order: Order) -> dict:
             "qty": line.qty,
             "price_uzs": line.price_uzs,
             "is_gift": line.is_gift,
+            "axes": line.variant.axes,
         }
         for line in order.lines.select_related("variant__product_model")
     ]

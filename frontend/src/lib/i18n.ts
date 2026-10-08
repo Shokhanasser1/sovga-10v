@@ -115,6 +115,7 @@ const ru = {
   payNext: "Онлайн-оплата появится на следующем этапе — менеджер свяжется с вами для оплаты.",
   priceLocked: (time: string) => `Цена закреплена до ${time}`,
   giftLabel: "подарок",
+  free: "бесплатно",
   orderStatus: {
     sourcing: "Проверяем наличие у поставщика",
     confirmed: "Ждёт оплаты",
@@ -245,6 +246,7 @@ const uz: Dictionary = {
   payNext: "Onlayn toʻlov keyingi bosqichda qoʻshiladi — toʻlov uchun menejer siz bilan bogʻlanadi.",
   priceLocked: (time: string) => `Narx ${time} gacha qotirilgan`,
   giftLabel: "sovgʻa",
+  free: "bepul",
   orderStatus: {
     sourcing: "Yetkazib beruvchida mavjudligini tekshiryapmiz",
     confirmed: "Toʻlov kutilmoqda",

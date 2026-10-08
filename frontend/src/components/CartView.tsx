@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 
 import { removeFromCart, setCartGift, setCartQty, MAX_QTY, type CartItem } from "@/lib/cart-store";
-import { formatSum } from "@/lib/format";
+import { formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
 import type { QuoteLine } from "@/lib/schemas";
 import { useCart } from "@/lib/use-compare";
@@ -28,7 +28,7 @@ function GiftPicker({ item, line, lang }: { item: CartItem; line: QuoteLine; lan
             checked={chosen === option.sku}
             onChange={() => setCartGift(item.sku, option.sku)}
           />
-          <span>{localized(option, lang)}</span>
+          <span>{withVariant(localized(option, lang), option.axes, lang)}</span>
           <span className={styles.giftPrice}>{formatSum(option.price_uzs, lang)}</span>
         </label>
       ))}

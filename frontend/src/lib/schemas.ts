@@ -126,6 +126,7 @@ const giftOptionSchema = z.object({
   name_ru: z.string(),
   name_uz: z.string(),
   price_uzs: z.number(),
+  axes: attrMap.default({}),
 });
 
 export const quoteSchema = z.object({
@@ -176,6 +177,7 @@ export const orderSchema = z.object({
       qty: z.number(),
       price_uzs: z.number(),
       is_gift: z.boolean(),
+      axes: attrMap.default({}),
     }),
   ),
   events: z.array(z.object({ status: orderStatusSchema, note: z.string(), at: z.string() })),

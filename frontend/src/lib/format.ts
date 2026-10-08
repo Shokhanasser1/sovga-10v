@@ -46,3 +46,9 @@ export function deliveryText(
     leadDays === 0 ? dict.deliveryToday : leadDays === 1 ? dict.deliveryTomorrow : dict.deliveryIn(leadDays);
   return `${label} — ${when}`;
 }
+
+/** «Чехол Spigen · Чёрный» — название и значения осей варианта (цвет и т. п.). */
+export function withVariant(name: string, axes: Record<string, AttrValue>, locale: Locale): string {
+  const parts = Object.values(axes).map((value) => formatValue(value, "", locale));
+  return [name, ...parts].join(" · ");
+}

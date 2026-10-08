@@ -6,7 +6,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { createOrder, fetchMe } from "@/lib/api-client";
 import { clearCart } from "@/lib/cart-store";
-import { formatSum } from "@/lib/format";
+import { formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
 import { useCart } from "@/lib/use-compare";
 import { toRequestItems, useQuote } from "@/lib/use-quote";
@@ -100,7 +100,7 @@ export function CheckoutView({ lang }: { lang: Locale }) {
               </div>
               {line.gift && (
                 <p className={styles.summaryGift}>
-                  + {dict.yourGift}: {localized(line.gift, lang)}
+                  + {dict.yourGift}: {withVariant(localized(line.gift, lang), line.gift.axes, lang)}
                 </p>
               )}
             </div>
