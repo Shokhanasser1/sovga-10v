@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { ApiClientError, cancelOrder, fetchOrder, payLink } from "@/lib/api-client";
+import { ApiClientError, cancelOrder, fetchOrder, payLink, telegramLink } from "@/lib/api-client";
 import { formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
 import { formatDateTime } from "@/lib/navigation";
@@ -41,6 +41,22 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
       window.location.assign(await payLink(number, provider, lang));
     } catch (failure) {
       setError((failure as Error).message);
+      setBusy(false);
+    }
+  }
+
+  async function connectTelegram() {
+    setBusy(true);
+    setError("");
+    try {
+      const url = await telegramLink(lang);
+      // Новая вкладка, чтобы страница заказа осталась; если браузер её заблокировал — переходим в этой.
+      const tab = window.open(url, "_blank");
+      if (tab) tab.opener = null;
+      else window.location.assign(url);
+    } catch (failure) {
+      setError((failure as Error).message);
+    } finally {
       setBusy(false);
     }
   }
@@ -106,11 +122,19 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
             {order.address_text}
             {order.address_landmark && ` — ${order.address_landmark}`}
           </p>
-          {order.can_cancel && (
-            <button className="button button-ghost" type="button" style={{ marginTop: 16 }} disabled={busy} onClick={cancel}>
-              {dict.cancelOrder}
-            </button>
-          )}
+          {order.telegram === "linked" && <p className={forms.hint}>{dict.telegramLinked}</p>}
+          <div className={styles.actions}>
+            {order.telegram === "available" && (
+              <button className="button button-ghost" type="button" disabled={busy} onClick={connectTelegram}>
+                {dict.telegramConnect}
+              </button>
+            )}
+            {order.can_cancel && (
+              <button className="button button-ghost" type="button" disabled={busy} onClick={cancel}>
+                {dict.cancelOrder}
+              </button>
+            )}
+          </div>
         </section>
         <ol className={`${forms.card} ${styles.timeline}`}>
           {order.events.map((event) => (

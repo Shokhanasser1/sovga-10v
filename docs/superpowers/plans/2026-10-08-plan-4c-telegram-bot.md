@@ -23,7 +23,7 @@
 ### Task 1. Клиент Bot API и привязка чатов
 - `notifications/telegram.py`: общий `call(method, payload)`; `send_message` возвращает `message_id`, принимает `reply_markup`.
 - `bot.TelegramLink(code, kind customer|supplier, customer, supplier, expires_at, used_at)`; `Supplier.telegram_chat_id`.
-- `POST /api/v1/auth/telegram-link/ {lang}` → `{url: https://t.me/<TELEGRAM_BOT_USERNAME>?start=c_<code>}` (вошедший покупатель, CSRF); 503 без настроек бота. `GET /auth/me/` → `telegram: {available, linked}`.
+- `POST /api/v1/bot/link/ {lang}` → `{url: https://t.me/<TELEGRAM_BOT_USERNAME>?start=c_<code>}` (вошедший покупатель, CSRF); 503 без настроек бота. В заказе — `telegram: linked | available | off`.
 - Админка поставщика: действие «Ссылка для подключения бота».
 - Тесты: код одноразовый и истекает; чужой/анонимный — 401/403; язык покупателя сохраняется.
 

@@ -4,6 +4,7 @@
   1. Django с демо-данными: из backend/ — manage.py seed_demo, затем manage.py runserver
      с DEBUG=true, OTP_FIXED_CODE=000000 (код входа для проверки оформления заказа),
      PAYME_MERCHANT_ID=e2e и PAYME_KEY=e2e-payme-key (скрипт сам играет роль Payme)
+     и TELEGRAM_BOT_TOKEN=e2e, TELEGRAM_BOT_USERNAME=sovga_e2e_bot (кнопка «Статусы в Telegram»)
   2. Витрина: из frontend/ — npm run build, затем npm start
 Запуск: python e2e/storefront_check.py   (адреса — переменные STOREFRONT_URL и API_URL)
 Скриншоты сохраняются в e2e/shots/.
@@ -26,6 +27,7 @@ BASE = os.environ.get("STOREFRONT_URL", "http://localhost:3000").rstrip("/")
 API = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
 OTP_CODE = os.environ.get("E2E_OTP_CODE", "000000")
 PAYME_KEY = os.environ.get("E2E_PAYME_KEY", "e2e-payme-key")
+BOT_USERNAME = os.environ.get("E2E_BOT_USERNAME", "sovga_e2e_bot")
 # Свой номер на каждый прогон: лимиты на номер (раз в минуту, 5 в час) не мешают повторным прогонам.
 BUYER_PHONE = f"90 {random.randint(100, 999)} {random.randint(10, 99)} {random.randint(10, 99)}"
 problems: list[str] = []
@@ -182,6 +184,14 @@ with sync_playwright() as p:
     check(buyer.get_by_text("подарок", exact=True).count() >= 1, "заказ: подарок в составе")
     check(buyer.locator("header").get_by_text("Корзина").inner_text().strip() == "Корзина", "корзина очищена после заказа")
     check(buyer.get_by_role("button", name="Оплатить через Payme").count() == 1, "заказ: кнопка оплаты Payme")
+
+    # Ссылка на бота открывается в новой вкладке; сам t.me не нужен — отвечаем заглушкой.
+    buyer.context.route("https://t.me/**", lambda route: route.fulfill(body="telegram"))
+    with buyer.context.expect_page() as popup:
+        buyer.get_by_role("button", name="Получать статусы в Telegram").click()
+    telegram_url = popup.value.url
+    popup.value.close()
+    check(telegram_url.startswith(f"https://t.me/{BOT_USERNAME}?start=c_"), f"заказ: ссылка на бота ({telegram_url[:45]}…)")
 
     total = buyer.context.request.get(f"{API}/api/v1/orders/{number}/").json()["total_uzs"]
     account = {"order_id": number}

@@ -170,6 +170,7 @@ export const orderSchema = z.object({
   can_cancel: z.boolean(),
   can_pay: z.boolean(),
   pay_providers: z.array(z.enum(["payme", "click"])),
+  telegram: z.enum(["linked", "available", "off"]),
   lines: z.array(
     z.object({
       sku: z.string(),

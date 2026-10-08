@@ -39,6 +39,17 @@
   margin-top: 12px;
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.actions:empty {
+  display: none;
+}
+
 .notice p + p {
   margin-top: 6px;
   color: var(--muted);

@@ -162,6 +162,10 @@ export function cancelOrder(number: string): Promise<Order> {
   return post(`/api/v1/orders/${encodeURIComponent(number)}/cancel/`, orderSchema);
 }
 
+export async function telegramLink(lang: string): Promise<string> {
+  return (await post("/api/v1/bot/link/", z.object({ url: z.string().url() }), { lang })).url;
+}
+
 export async function payLink(number: string, provider: "payme" | "click", lang: string): Promise<string> {
   const response = await post(`/api/v1/orders/${encodeURIComponent(number)}/pay/`, z.object({ url: z.string().url() }), {
     provider,
