@@ -1,0 +1,79 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrahead %}{{ block.super }}{% if not off %}<meta http-equiv="refresh" content="30">{% endif %}{% endblock %}
+{% block extrastyle %}{{ block.super }}
+<style>
+  .tg { display: grid; grid-template-columns: minmax(200px, 280px) 1fr; gap: 20px; }
+  @media (max-width: 760px) { .tg { grid-template-columns: 1fr; } }
+  .tg-chats a { display: block; padding: 8px 10px; border-radius: 6px; }
+  .tg-chats a.active { background: var(--selected-bg); font-weight: 600; }
+  .tg-chats form { margin: 4px 0; }
+  .tg-log { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+  .tg-msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; white-space: pre-wrap; background: var(--darkened-bg); }
+  .tg-msg.in { align-self: flex-end; background: var(--selected-bg); }
+  .tg-msg time { display: block; color: var(--body-quiet-color); font-size: 0.75rem; }
+  .tg-buttons { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tg-say { display: flex; gap: 8px; margin-top: 16px; max-width: 640px; }
+  .tg-say input[name=text] { flex: 1; }
+  .tg-note { color: var(--body-quiet-color); }
+</style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> › Имитация Telegram</div>
+{% endblock %}
+
+{% block content %}
+{% if off %}
+  <p>Учебный режим выключен или задан настоящий токен бота — сообщения уходят в Telegram.
+    Чтобы смотреть переписку здесь, включите <code>DEMO_MODE=true</code> и уберите <code>TELEGRAM_BOT_TOKEN</code> в <code>backend/.env</code>.</p>
+{% else %}
+<p class="tg-note">Бот работает по-настоящему, только вместо Telegram — эта страница. Нажимайте кнопки и пишите от имени любого чата:
+  поставщик подтверждает заказ, присылает цену или IMEI; покупатель пишет /orders. Страница обновляется каждые 30 секунд.</p>
+<div class="tg">
+  <nav class="tg-chats">
+    {% for item in chats %}
+      <a href="?chat={{ item.id }}" {% if item.id == chat %}class="active"{% endif %}>{{ item.title }}</a>
+    {% empty %}
+      <p class="tg-note">Чатов пока нет. Подключите поставщика ниже или нажмите «Получать статусы в Telegram» на странице заказа.</p>
+    {% endfor %}
+    {% if unlinked %}
+      <h3>Подключить поставщика</h3>
+      {% for supplier in unlinked %}
+        <form method="post">{% csrf_token %}<input type="hidden" name="action" value="link_supplier">
+          <input type="hidden" name="supplier" value="{{ supplier.pk }}">
+          <button type="submit" class="button">{{ supplier.name }}</button></form>
+      {% endfor %}
+    {% endif %}
+    <form method="get" style="margin-top: 16px"><input name="chat" placeholder="Номер чата" size="14"> <button class="button" type="submit">Открыть</button></form>
+  </nav>
+  <section>
+    {% if chat %}
+      <div class="tg-log">
+        {% for message in history %}
+          <div class="tg-msg {{ message.direction }}">{{ message.text }}
+            <time>{{ message.created_at|date:"d.m H:i" }}</time>
+            {% if message.buttons %}
+              <div class="tg-buttons">
+                {% for button in message.buttons %}
+                  <form method="post">{% csrf_token %}<input type="hidden" name="action" value="press">
+                    <input type="hidden" name="chat" value="{{ chat }}"><input type="hidden" name="message" value="{{ message.pk }}">
+                    <input type="hidden" name="data" value="{{ button.callback_data }}">
+                    <button type="submit" class="button">{{ button.text }}</button></form>
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+        {% empty %}
+          <p class="tg-note">В этом чате пока нет сообщений.</p>
+        {% endfor %}
+      </div>
+      <form class="tg-say" method="post">{% csrf_token %}<input type="hidden" name="action" value="say">
+        <input type="hidden" name="chat" value="{{ chat }}">
+        <input name="text" maxlength="4096" placeholder="Сообщение боту от имени этого чата: /orders, цена, IMEI…" autofocus>
+        <button type="submit" class="button default">Отправить</button></form>
+    {% endif %}
+  </section>
+</div>
+{% endif %}
+{% endblock %}

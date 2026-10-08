@@ -10,13 +10,34 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+# Учебный режим без токена: чат менеджеров в «Имитации Telegram»
+DEMO_MANAGER_CHAT = -1000000000001
+DemoTransport = Callable[[str, dict], Any]
+_demo_transport: DemoTransport | None = None
+
+
 class TelegramError(Exception):
     pass
 
 
+def use_demo_transport(transport: DemoTransport) -> None:
+    """Приложение bot подставляет сюда запись сообщений в базу — без зависимости notifications от bot."""
+    global _demo_transport
+    _demo_transport = transport
+
+
+def simulated() -> bool:
+    """Учебный режим и нет токена: вместо Telegram — «Имитация Telegram» в админке. Настоящий токен главнее."""
+    return bool(settings.DEMO_MODE and not settings.TELEGRAM_BOT_TOKEN and _demo_transport is not None)
+
+
 def bot_available() -> bool:
-    """Бот настроен целиком: токен для API и имя для ссылок t.me/<имя>."""
-    return bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_USERNAME)
+    """Бот настроен целиком (токен и имя для ссылок t.me/<имя>) или имитируется."""
+    return simulated() or bool(settings.TELEGRAM_BOT_TOKEN and settings.TELEGRAM_BOT_USERNAME)
+
+
+def manager_chats() -> list:
+    return list(settings.MANAGER_CHAT_IDS) or ([DEMO_MANAGER_CHAT] if simulated() else [])
 
 
 def call(
@@ -26,6 +47,8 @@ def call(
     http_post: Callable[..., requests.Response] = requests.post,
     timeout: int = 10,
 ) -> Any:
+    if simulated():
+        return _demo_transport(method, payload)
     token = token or settings.TELEGRAM_BOT_TOKEN
     try:
         response = http_post(f"https://api.telegram.org/bot{token}/{method}", json=payload, timeout=timeout)
@@ -45,6 +68,8 @@ def download_file(
     http_get: Callable[..., requests.Response] = requests.get,
 ) -> bytes:
     """Файл, присланный боту. Больше max_bytes — не скачиваем."""
+    if simulated():
+        raise TelegramError("В учебном режиме файлы боту не передаются — загрузите прайс в админке")
     token = token or settings.TELEGRAM_BOT_TOKEN
     info = call("getFile", {"file_id": file_id})
     path = info.get("file_path") if isinstance(info, dict) else None
@@ -79,9 +104,10 @@ def send_message(
 
 def notify_managers(text: str) -> int:
     """Сообщение всем менеджерам. Бот не настроен — ничего не отправляем, только пишем в лог."""
-    if not settings.TELEGRAM_BOT_TOKEN or not settings.MANAGER_CHAT_IDS:
+    chats = manager_chats()
+    if not (settings.TELEGRAM_BOT_TOKEN or simulated()) or not chats:
         logger.warning("Уведомление менеджерам не отправлено — бот не настроен: %s", text)
         return 0
-    for chat_id in settings.MANAGER_CHAT_IDS:
+    for chat_id in chats:
         send_message(chat_id, text)
-    return len(settings.MANAGER_CHAT_IDS)
+    return len(chats)

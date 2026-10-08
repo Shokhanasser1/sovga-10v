@@ -21,3 +21,29 @@ class TelegramLink(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_kind_display()}: {self.customer or self.supplier}"
+
+
+class DemoMessage(models.Model):
+    """Учебный режим без токена: что бот отправил бы в чат и что ему ответили из «Имитации Telegram»."""
+
+    class Direction(models.TextChoices):
+        OUT = "out", "Бот → чат"
+        IN = "in", "Чат → бот"
+
+    chat_id = models.BigIntegerField(db_index=True)
+    direction = models.CharField(max_length=3, choices=Direction.choices)
+    text = models.TextField()
+    reply_markup = models.JSONField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["pk"]
+        verbose_name = "сообщение (имитация Telegram)"
+        verbose_name_plural = "имитация Telegram"
+
+    def __str__(self) -> str:
+        return f"{self.chat_id}: {self.text[:40]}"
+
+    def buttons(self) -> list[dict]:
+        rows = (self.reply_markup or {}).get("inline_keyboard", [])
+        return [button for row in rows for button in row if "callback_data" in button]

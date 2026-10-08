@@ -39,9 +39,16 @@ class SupplierAdmin(admin.ModelAdmin):
 
     @admin.action(description="Ссылка для подключения Telegram-бота", permissions=["change"])
     def bot_link_action(self, request, queryset):
+        from apps.bot.demo import supplier_chat
         from apps.bot.links import supplier_link
-        from apps.notifications.telegram import bot_available
+        from apps.notifications.telegram import bot_available, simulated
 
+        if simulated():
+            for supplier in queryset:
+                supplier.telegram_chat_id = supplier_chat(supplier)
+                supplier.save(update_fields=["telegram_chat_id"])
+            self.message_user(request, "Учебный режим: поставщики подключены к учебным чатам — см. «Имитация Telegram»")
+            return
         if not bot_available():
             self.message_user(
                 request, "Бот не настроен: нужны TELEGRAM_BOT_TOKEN и TELEGRAM_BOT_USERNAME в backend/.env",

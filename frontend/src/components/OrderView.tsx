@@ -50,6 +50,10 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
     setError("");
     try {
       const url = await telegramLink(lang);
+      if (!url) {
+        setOrder(await fetchOrder(number));
+        return;
+      }
       // Новая вкладка, чтобы страница заказа осталась; если браузер её заблокировал — переходим в этой.
       const tab = window.open(url, "_blank");
       if (tab) tab.opener = null;
