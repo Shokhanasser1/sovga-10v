@@ -211,3 +211,15 @@ def test_run_jobs_cancels_expired_orders_and_delivers_events(shop, customer, mon
     assert order.status == Order.Status.CANCELLED
     assert sent and order.number in sent[0]
     assert OutboxEvent.objects.get(type="order.created").status == OutboxEvent.Status.DONE
+
+
+def test_customer_cancel_rechecks_the_status_under_lock(shop, customer):
+    """Оплата пришла между загрузкой заказа и отменой — устаревший объект не даёт отменить оплаченное."""
+    stale = order_for(customer, CartItem(PHONE_SKU, 1))
+    Order.objects.filter(pk=stale.pk).update(status=Order.Status.PAID)
+
+    with pytest.raises(OrderError):
+        cancel_order(stale, NOW, actor="customer", by_customer=True)
+
+    assert Order.objects.get(pk=stale.pk).status == Order.Status.PAID
+    assert Reservation.objects.filter(ref=stale.number, released_at__isnull=True).exists()

@@ -117,8 +117,19 @@ def create_order(
 
 
 @transaction.atomic
-def transition(order: Order, target: str, now: datetime, actor: str, note: str = "") -> Order:
+def transition(
+    order: Order,
+    target: str,
+    now: datetime,
+    actor: str,
+    note: str = "",
+    allowed_from: set[str] | None = None,
+    denied_message: str = "",
+) -> Order:
+    """Все проверки — по свежему статусу под блокировкой, а не по объекту, загруженному раньше."""
     locked = Order.objects.select_for_update().get(pk=order.pk)
+    if allowed_from is not None and locked.status not in allowed_from:
+        raise OrderError(denied_message or "Сейчас это действие недоступно")
     if not can_transition(locked.status, target):
         raise OrderError(f"Нельзя перевести заказ из «{S(locked.status).label}» в «{S(target).label}»")
     previous = locked.status
@@ -148,9 +159,11 @@ def confirm_sourcing(order: Order, now: datetime, actor: str) -> Order:
 
 
 def cancel_order(order: Order, now: datetime, actor: str, note: str = "", by_customer: bool = False) -> Order:
-    if by_customer and order.status not in CUSTOMER_CANCELLABLE:
-        raise OrderError("Оплаченный заказ отменяет менеджер — напишите нам, деньги вернём")
-    return transition(order, S.CANCELLED, now, actor, note or "Отменён")
+    return transition(
+        order, S.CANCELLED, now, actor, note or "Отменён",
+        allowed_from=CUSTOMER_CANCELLABLE if by_customer else None,
+        denied_message="Оплаченный заказ отменяет менеджер — напишите нам, деньги вернём",
+    )
 
 
 def expire_orders(now: datetime) -> int:
