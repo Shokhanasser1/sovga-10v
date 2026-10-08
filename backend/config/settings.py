@@ -1,3 +1,4 @@
+from decimal import Decimal
 from pathlib import Path
 
 import environ
@@ -88,3 +89,6 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 24,
 }
+
+# Комиссия эквайринга (Payme/Click) в процентах — уменьшает бюджет подарка
+CARD_COMMISSION_PCT = Decimal(env("CARD_COMMISSION_PCT", default="0"))
