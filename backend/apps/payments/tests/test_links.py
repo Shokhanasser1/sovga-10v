@@ -112,3 +112,25 @@ def test_paid_order_notifies_managers(order, monkeypatch):
     deliver_pending(NOW)
 
     assert any(order.number in text and "оплачен через Payme" in text for text in sent)
+
+
+def test_expiry_skips_an_order_paid_meanwhile(order):
+    from apps.orders.services import expire_if_still_due
+
+    start_payment(order, NOW, actor="payme")
+    Order.objects.filter(pk=order.pk).update(status=S.PAID)
+
+    assert expire_if_still_due(order.pk, S.AWAITING_PAYMENT, NOW + PAYMENT_WINDOW * 2) is False
+    order.refresh_from_db()
+    assert order.status == S.PAID
+
+
+def test_expiry_skips_a_payment_window_extended_meanwhile(order):
+    from apps.orders.services import expire_if_still_due
+
+    start_payment(order, NOW, actor="payme")
+    start_payment(order, NOW + PAYMENT_WINDOW, actor="payme")  # новая транзакция продлила окно
+
+    assert expire_if_still_due(order.pk, S.AWAITING_PAYMENT, NOW + PAYMENT_WINDOW + timedelta(minutes=1)) is False
+    order.refresh_from_db()
+    assert order.status == S.AWAITING_PAYMENT

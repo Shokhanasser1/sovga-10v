@@ -166,18 +166,30 @@ def cancel_order(order: Order, now: datetime, actor: str, note: str = "", by_cus
     )
 
 
+EXPIRY = {
+    S.CONFIRMED: ("price_lock_until", "Не оплачен за 30 минут — резерв снят"),
+    S.SOURCING: ("sla_deadline", "Поставщик не подтвердил наличие за 2 часа"),
+    S.AWAITING_PAYMENT: ("price_lock_until", "Оплата не завершена за 12 часов — резерв снят"),
+}
+
+
+@transaction.atomic
+def expire_if_still_due(pk: int, status: str, now: datetime) -> bool:
+    """Перепроверка под блокировкой: пока шёл обход, заказ могли оплатить или продлить ему срок."""
+    field, note = EXPIRY[status]
+    locked = Order.objects.select_for_update().get(pk=pk)
+    deadline = getattr(locked, field)
+    if locked.status != status or deadline is None or deadline >= now:
+        return False
+    transition(locked, S.CANCELLED, now, actor="system", note=note, allowed_from={status})
+    return True
+
+
 def expire_orders(now: datetime) -> int:
     """Неоплаченные после фиксации цены, с брошенной оплатой и неподтверждённые поставщиком — отменяем."""
-    expired = [
-        (order, "Не оплачен за 30 минут — резерв снят")
-        for order in Order.objects.filter(status=S.CONFIRMED, price_lock_until__lt=now)
-    ] + [
-        (order, "Поставщик не подтвердил наличие за 2 часа")
-        for order in Order.objects.filter(status=S.SOURCING, sla_deadline__lt=now)
-    ] + [
-        (order, "Оплата не завершена за 12 часов — резерв снят")
-        for order in Order.objects.filter(status=S.AWAITING_PAYMENT, price_lock_until__lt=now)
+    candidates = [
+        (pk, status)
+        for status, (field, _) in EXPIRY.items()
+        for pk in Order.objects.filter(status=status, **{f"{field}__lt": now}).values_list("pk", flat=True)
     ]
-    for order, note in expired:
-        transition(order, S.CANCELLED, now, actor="system", note=note)
-    return len(expired)
+    return sum(expire_if_still_due(pk, status, now) for pk, status in candidates)
