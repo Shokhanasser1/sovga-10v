@@ -3,6 +3,7 @@
 import csv
 import io
 import re
+import zipfile
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from decimal import Decimal, InvalidOperation
@@ -12,6 +13,9 @@ from openpyxl import load_workbook
 REQUIRED_COLUMNS = ("code", "price", "qty")
 MAX_PRICE_USD = Decimal("1000000")
 MAX_QTY = 1_000_000
+# Прайс приходит и от поставщиков в бот — защита от «zip-бомб» и бесконечных таблиц.
+MAX_UNPACKED_BYTES = 50 * 1024 * 1024
+MAX_ROWS = 20_000
 
 
 @dataclass(frozen=True)
@@ -91,7 +95,19 @@ def read_csv(text: str) -> list[dict]:
     header = text.split("\n", 1)[0]
     delimiter = max([",", ";", "\t"], key=header.count)
     reader = csv.DictReader(io.StringIO(text), delimiter=delimiter)
-    return [{key: value for key, value in row.items() if key is not None} for row in reader]
+    records = []
+    for row in reader:
+        if len(records) >= MAX_ROWS:
+            raise ValueError(f"В прайсе больше {MAX_ROWS} строк")
+        records.append({key: value for key, value in row.items() if key is not None})
+    return records
+
+
+def check_xlsx_size(data: bytes) -> None:
+    """Размеры внутри архива: zipfile не прочитает больше заявленного, так что проверки до чтения достаточно."""
+    with zipfile.ZipFile(io.BytesIO(data)) as archive:
+        if sum(member.file_size for member in archive.infolist()) > MAX_UNPACKED_BYTES:
+            raise ValueError("Файл слишком большой после распаковки")
 
 
 def read_xlsx(source) -> list[dict]:
@@ -108,6 +124,8 @@ def read_xlsx(source) -> list[dict]:
                 continue
             if not filled:
                 continue
+            if len(records) >= MAX_ROWS:
+                raise ValueError(f"В прайсе больше {MAX_ROWS} строк")
             records.append({name: value for name, value in zip(header, values) if name})
         return records
     finally:

@@ -7,7 +7,7 @@ from pathlib import Path
 
 import requests
 
-from .feeds import parse_rows, read_csv, read_json, read_xlsx, validate_columns
+from .feeds import check_xlsx_size, parse_rows, read_csv, read_json, read_xlsx, validate_columns
 from .importer import import_feed
 from .models import Supplier, SupplierFeedRun
 
@@ -51,6 +51,7 @@ def read_bytes(filename: str, data: bytes) -> list[dict]:
     """.xlsx или .csv (UTF-8 или Windows-1251 — как сохраняет русский Excel)."""
     suffix = Path(filename).suffix.lower()
     if suffix in (".xlsx", ".xlsm"):
+        check_xlsx_size(data)
         return read_xlsx(io.BytesIO(data))
     if suffix == ".csv":
         try:

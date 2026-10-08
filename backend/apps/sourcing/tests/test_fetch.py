@@ -102,3 +102,42 @@ def test_import_feed_file_command(sheet_supplier, tmp_path):
 def test_import_feed_file_unknown_supplier(tmp_path):
     with pytest.raises(CommandError):
         call_command("import_feed_file", "999", str(tmp_path / "missing.xlsx"))
+
+
+def _xlsx_bytes(rows: int) -> bytes:
+    import io
+
+    workbook = Workbook()
+    workbook.active.append(["Артикул", "Цена", "Остаток"])
+    for index in range(rows):
+        workbook.active.append([f"A{index}", 100, 1])
+    buffer = io.BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
+
+
+def test_xlsx_that_unpacks_too_big_is_refused(monkeypatch):
+    import pytest
+
+    from apps.sourcing import feeds
+    from apps.sourcing.fetch import read_bytes
+
+    data = _xlsx_bytes(50)
+    monkeypatch.setattr(feeds, "MAX_UNPACKED_BYTES", len(data))  # распакованный больше сжатого
+
+    with pytest.raises(ValueError, match="распаковки"):
+        read_bytes("price.xlsx", data)
+
+
+@pytest.mark.parametrize("name, data", [
+    ("price.xlsx", lambda: _xlsx_bytes(6)),
+    ("price.csv", lambda: ("Артикул;Цена;Остаток\n" + "A;1;1\n" * 6).encode()),
+])
+def test_too_many_rows_are_refused(monkeypatch, name, data):
+    from apps.sourcing import feeds
+    from apps.sourcing.fetch import read_bytes
+
+    monkeypatch.setattr(feeds, "MAX_ROWS", 5)
+
+    with pytest.raises(ValueError, match="строк"):
+        read_bytes(name, data())
