@@ -48,7 +48,7 @@ def test_wrong_action_shows_a_warning_and_changes_nothing(admin_client, sourcing
 
     page = run_action(admin_client, "confirm_sourcing_action", sourcing_order).content.decode()
 
-    assert "Нельзя перевести заказ" in page
+    assert "Заказ уже не ждёт подтверждения поставщика" in page
 
 
 def test_order_page_shows_lines_and_history(admin_client, sourcing_order):

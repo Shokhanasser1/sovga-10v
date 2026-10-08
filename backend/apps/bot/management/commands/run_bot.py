@@ -7,6 +7,7 @@ from django.utils import timezone
 from apps.bot.polling import poll_once
 from apps.notifications.outbox import deliver_pending
 from apps.notifications.telegram import TelegramError
+from apps.orders.supplier_requests import alert_silent_requests
 
 MAX_PAUSE = 60
 
@@ -29,6 +30,7 @@ class Command(BaseCommand):
             while True:
                 try:
                     offset = poll_once(offset)
+                    alert_silent_requests(timezone.now())
                     deliver_pending(timezone.now())
                     pause = 1
                 except TelegramError as error:

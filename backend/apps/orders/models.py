@@ -2,7 +2,7 @@ from django.db import models
 
 from apps.catalog.models import Variant
 from apps.customers.models import Customer
-from apps.sourcing.models import Offer, Reservation
+from apps.sourcing.models import Offer, Reservation, Supplier
 
 
 class Order(models.Model):
@@ -84,3 +84,30 @@ class OrderEvent(models.Model):
 
     def __str__(self) -> str:
         return f"{self.order}: {self.status_from or '—'} → {self.status_to}"
+
+
+class SupplierRequest(models.Model):
+    """Запрос поставщику «есть ли товар» по заказу. Отвечает поставщик кнопками в боте или менеджер в админке."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Ждём ответа"
+        CONFIRMED = "confirmed", "Есть"
+        DECLINED = "declined", "Нет в наличии"
+        AWAITING_PRICE = "awaiting_price", "Пишет новую цену"
+        PRICE_OFFERED = "price_offered", "Предложил другую цену"
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="supplier_requests")
+    supplier = models.ForeignKey(Supplier, on_delete=models.PROTECT, related_name="requests")
+    status = models.CharField(max_length=16, choices=Status.choices, default=Status.PENDING)
+    proposed_cost_usd = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    message_id = models.BigIntegerField(null=True, blank=True)
+    created_at = models.DateTimeField()
+    sent_at = models.DateTimeField(null=True, blank=True, help_text="Пусто — поставщик без бота, подтверждает менеджер")
+    answered_at = models.DateTimeField(null=True, blank=True)
+    alerted_at = models.DateTimeField(null=True, blank=True, help_text="Когда менеджерам сообщили, что поставщик молчит")
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["order", "supplier"], name="unique_supplier_request")]
+
+    def __str__(self) -> str:
+        return f"{self.order} → {self.supplier}"

@@ -3,7 +3,7 @@ from django.utils import timezone
 
 from apps.payments.admin import PaymentInline
 
-from .models import Order, OrderEvent, OrderLine
+from .models import Order, OrderEvent, OrderLine, SupplierRequest
 from .services import OrderError, cancel_order, confirm_sourcing
 
 
@@ -30,6 +30,17 @@ class OrderEventInline(admin.TabularInline):
         return False
 
 
+class SupplierRequestInline(admin.TabularInline):
+    model = SupplierRequest
+    extra = 0
+    can_delete = False
+    fields = ("supplier", "status", "proposed_cost_usd", "sent_at", "answered_at", "alerted_at")
+    readonly_fields = fields
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     """Статус меняется только действиями — через машину состояний, с записью в историю."""
@@ -37,7 +48,7 @@ class OrderAdmin(admin.ModelAdmin):
     list_display = ("number", "customer", "status", "total_uzs", "created_at", "sla_deadline")
     list_filter = ("status", "payment_method")
     search_fields = ("number", "customer__phone")
-    inlines = [OrderLineInline, PaymentInline, OrderEventInline]
+    inlines = [OrderLineInline, SupplierRequestInline, PaymentInline, OrderEventInline]
     actions = ["confirm_sourcing_action", "cancel_action"]
 
     def get_readonly_fields(self, request, obj=None):

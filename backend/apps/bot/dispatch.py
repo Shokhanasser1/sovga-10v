@@ -1,9 +1,11 @@
-"""Входящие обновления Telegram: команды покупателей, поставщиков и менеджеров."""
+"""Входящие обновления Telegram: команды покупателей, кнопки и цены поставщиков, /id для менеджеров."""
 
 from datetime import datetime
 
 from apps.customers.models import Customer
+from apps.notifications import telegram
 from apps.notifications.telegram import send_message
+from apps.orders.supplier_requests import RequestError, answer_request, offer_price
 
 from . import texts
 from .links import redeem
@@ -11,9 +13,33 @@ from .models import TelegramLink
 
 
 def handle_update(update: dict, now: datetime) -> None:
+    if query := update.get("callback_query"):
+        on_callback(query, now)
+        return
     message = update.get("message")
     if message and isinstance(message.get("text"), str):
         on_message(message["chat"]["id"], message["text"].strip(), now)
+
+
+def on_callback(query: dict, now: datetime) -> None:
+    """Кнопка под запросом поставщику: sr:<номер запроса>:yes|no|price."""
+    message = query.get("message") or {}
+    chat_id = (message.get("chat") or {}).get("id")
+    kind, _, rest = str(query.get("data") or "").partition(":")
+    request_id, _, choice = rest.partition(":")
+    try:
+        if kind != "sr" or chat_id is None or not (request_id.isascii() and request_id.isdigit()):
+            raise RequestError("Кнопка устарела")
+        reply = answer_request(int(request_id), chat_id, choice, now)
+    except RequestError as error:
+        telegram.call("answerCallbackQuery", {"callback_query_id": query["id"], "text": error.message, "show_alert": True})
+        return
+    telegram.call("answerCallbackQuery", {"callback_query_id": query["id"], "text": reply.text[:200]})
+    if reply.final:
+        text = f"{message.get('text', '')}\n\n{reply.text}"
+        telegram.call("editMessageText", {"chat_id": chat_id, "message_id": message.get("message_id"), "text": text})
+    else:
+        send_message(chat_id, reply.text)
 
 
 def on_message(chat_id: int, text: str, now: datetime) -> None:
@@ -28,7 +54,7 @@ def on_message(chat_id: int, text: str, now: datetime) -> None:
     elif command == "/id":
         reply = texts.CHAT_ID.format(chat_id=chat_id)
     else:
-        reply = texts.HELP
+        reply = offer_price(chat_id, text, now) or texts.HELP
     send_message(chat_id, reply)
 
 

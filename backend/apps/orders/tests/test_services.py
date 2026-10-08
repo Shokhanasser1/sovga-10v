@@ -223,3 +223,15 @@ def test_customer_cancel_rechecks_the_status_under_lock(shop, customer):
 
     assert Order.objects.get(pk=stale.pk).status == Order.Status.PAID
     assert Reservation.objects.filter(ref=stale.number, released_at__isnull=True).exists()
+
+
+def test_supplier_confirmation_does_not_rewind_a_started_payment(shop, customer):
+    move_phone_to_supplier(shop, Supplier.Connector.TELEGRAM)
+    order = order_for(customer, CartItem(PHONE_SKU, 1))
+    confirm_sourcing(order, NOW, actor="manager:anna")
+    Order.objects.filter(pk=order.pk).update(status=Order.Status.AWAITING_PAYMENT)
+
+    with pytest.raises(OrderError):
+        confirm_sourcing(order, NOW, actor="manager:anna")
+    order.refresh_from_db()
+    assert order.status == Order.Status.AWAITING_PAYMENT

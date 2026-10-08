@@ -11,7 +11,7 @@ from apps.notifications.outbox import emit
 from apps.sourcing.models import Offer, Reservation, Supplier
 from apps.sourcing.reservations import release, reserve
 
-from .models import Order, OrderEvent, OrderLine
+from .models import Order, OrderEvent, OrderLine, SupplierRequest
 from .quote import CartItem, Quote, QuoteLine, quote
 from .state import CUSTOMER_CANCELLABLE, can_transition
 
@@ -75,6 +75,18 @@ def _created_payload(order: Order) -> dict:
     return {"number": order.number, "status": order.status, "total": order.total_uzs, "lines": lines}
 
 
+def _ask_suppliers(order: Order, now: datetime) -> None:
+    """По запросу каждому поставщику, чьё наличие нужно подтвердить; отправит бот через outbox."""
+    suppliers = {
+        line.offer.supplier
+        for line in order.lines.select_related("offer__supplier")
+        if line.offer and _needs_supplier_confirmation(line.offer)
+    }
+    for supplier in sorted(suppliers, key=lambda item: item.pk):
+        request = SupplierRequest.objects.create(order=order, supplier=supplier, created_at=now)
+        emit("sourcing.requested", {"request": request.pk}, now)
+
+
 @transaction.atomic
 def create_order(
     customer: Customer,
@@ -105,6 +117,7 @@ def create_order(
         needs_confirmation = needs_confirmation or needs
     if needs_confirmation:
         order.sla_deadline = now + SOURCING_SLA
+        _ask_suppliers(order, now)
     else:
         order.status = S.CONFIRMED
         Reservation.objects.filter(ref=order.number).update(expires_at=order.price_lock_until)
@@ -148,7 +161,10 @@ def transition(
 @transaction.atomic
 def confirm_sourcing(order: Order, now: datetime, actor: str) -> Order:
     """Поставщик подтвердил наличие — покупатель получает 30 минут на оплату."""
-    confirmed = transition(order, S.CONFIRMED, now, actor, note="Поставщик подтвердил наличие")
+    confirmed = transition(
+        order, S.CONFIRMED, now, actor, note="Поставщик подтвердил наличие",
+        allowed_from={S.SOURCING}, denied_message="Заказ уже не ждёт подтверждения поставщика",
+    )
     confirmed.price_lock_until = now + PRICE_LOCK
     confirmed.sla_deadline = None
     confirmed.save(update_fields=["price_lock_until", "sla_deadline"])
