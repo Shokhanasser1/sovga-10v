@@ -89,6 +89,9 @@ def _sheet(book: Workbook, title: str, headers: list[str], rows: list[list], fir
         cell.font = Font(bold=True)
     for row in rows:
         sheet.append(row)
+        for cell in sheet[sheet.max_row]:
+            if isinstance(cell.value, str):
+                cell.data_type = "s"  # строка «=…» (причина возврата, название) — текст, а не формула
     for index, header in enumerate(headers, start=1):
         letter = sheet.cell(row=1, column=index).column_letter
         sheet.column_dimensions[letter].width = max(12, len(header) + 2)

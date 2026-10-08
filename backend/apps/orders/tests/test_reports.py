@@ -91,3 +91,38 @@ def test_report_needs_permission():
     client.force_login(staff)
 
     assert client.get(REPORT, {"date_from": "2026-10-01", "date_to": "2026-10-08"}).status_code == 403
+
+
+def test_text_never_becomes_a_formula(admin_client, shipped, settings):
+    settings.RETURN_DAYS = 10
+    deliver(shipped, NOW, actor="manager:anna")
+    open_return(shipped, '=HYPERLINK("http://evil.example","Открыть")', NOW, actor="manager:anna")
+    inspect_return(shipped, [imei(0), imei(1)], gift_returned=True, now=NOW, actor="manager:anna")
+    refund_return(shipped, NOW, actor="manager:anna")
+
+    response = admin_client.get(REPORT, {"date_from": TODAY.isoformat(), "date_to": TODAY.isoformat()})
+
+    reason = load_workbook(io.BytesIO(response.content))["Возвраты"]["G2"]
+    assert reason.data_type == "s" and reason.value.startswith("=HYPERLINK")
+
+
+def test_viewing_orders_is_not_enough_for_costs():
+    from django.contrib.auth.models import Permission
+
+    staff = get_user_model().objects.create_user("operator", password="x", is_staff=True)
+    staff.user_permissions.add(Permission.objects.get(codename="view_order"))
+    client = Client()
+    client.force_login(staff)
+    assert client.get(REPORT, {"date_from": "2026-10-01", "date_to": "2026-10-08"}).status_code == 403
+
+    staff.user_permissions.add(Permission.objects.get(codename="view_salesreport"))
+    client.force_login(get_user_model().objects.get(pk=staff.pk))
+    assert client.get(REPORT).status_code == 200
+
+
+def test_proxy_pages_have_no_side_doors(admin_client, shipped):
+    from django.urls import NoReverseMatch
+
+    for name in ["orders_salesreport_change", "orders_operatordesk_change", "orders_operatordesk_history"]:
+        with pytest.raises(NoReverseMatch):
+            reverse(f"admin:{name}", args=[shipped.pk])

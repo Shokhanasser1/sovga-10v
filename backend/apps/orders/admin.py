@@ -142,11 +142,13 @@ class OperatorDeskAdmin(admin.ModelAdmin):
         return False
 
     def get_urls(self):
+        # Только свои страницы: стандартные страницы записи у прокси были бы вторым входом в заказы.
         view = self.admin_site.admin_view
         return [
+            path("", view(self.changelist_view), name="orders_operatordesk_changelist"),
             path("<str:number>/pick/", view(self.pick_view), name="orders_operatordesk_pick"),
             path("<str:number>/do/<str:action>/", view(self.action_view), name="orders_operatordesk_action"),
-        ] + super().get_urls()
+        ]
 
     def _render(self, request, template: str, context: dict) -> TemplateResponse:
         if not self._allowed(request):
@@ -193,10 +195,13 @@ class OperatorDeskAdmin(admin.ModelAdmin):
 
 @admin.register(SalesReport)
 class SalesReportAdmin(admin.ModelAdmin):
-    """Excel для бухгалтера. Доступ — у кого есть право смотреть заказы."""
+    """Excel для бухгалтера. В нём себестоимость и телефоны — нужно отдельное право «view выгрузка для бухгалтера»."""
 
     def _allowed(self, request) -> bool:
-        return request.user.is_active and request.user.has_perm("orders.view_order")
+        return request.user.is_active and request.user.has_perm("orders.view_salesreport")
+
+    def get_urls(self):
+        return [path("", self.admin_site.admin_view(self.changelist_view), name="orders_salesreport_changelist")]
 
     def has_module_permission(self, request):
         return self._allowed(request)
