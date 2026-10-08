@@ -150,3 +150,12 @@ class ReturnRequest(models.Model):
 
     def __str__(self) -> str:
         return f"Возврат {self.order}"
+
+
+class SalesReport(Order):
+    """Пункт меню админки «Выгрузка для бухгалтера» — своей таблицы нет."""
+
+    class Meta:
+        proxy = True
+        verbose_name = "выгрузка для бухгалтера"
+        verbose_name_plural = "выгрузка для бухгалтера"

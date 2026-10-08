@@ -1,6 +1,9 @@
+from datetime import date
+
+from django.conf import settings
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponseNotAllowed
+from django.http import HttpResponse, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -9,8 +12,8 @@ from django.utils import timezone
 from apps.delivery.models import Shipment
 from apps.payments.admin import PaymentInline
 
-from . import desk
-from .models import OperatorDesk, Order, OrderEvent, OrderLine, ReturnRequest, SupplierRequest
+from . import desk, reports
+from .models import OperatorDesk, Order, OrderEvent, OrderLine, ReturnRequest, SalesReport, SupplierRequest
 from .services import OrderError, cancel_order, confirm_sourcing
 
 
@@ -186,3 +189,56 @@ class OperatorDeskAdmin(admin.ModelAdmin):
         if target == "desk":
             return redirect(reverse("admin:orders_operatordesk_changelist"))
         return redirect(reverse("admin:orders_operatordesk_pick", args=[order.number]))
+
+
+@admin.register(SalesReport)
+class SalesReportAdmin(admin.ModelAdmin):
+    """Excel для бухгалтера. Доступ — у кого есть право смотреть заказы."""
+
+    def _allowed(self, request) -> bool:
+        return request.user.is_active and request.user.has_perm("orders.view_order")
+
+    def has_module_permission(self, request):
+        return self._allowed(request)
+
+    def has_view_permission(self, request, obj=None):
+        return self._allowed(request)
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        if not self._allowed(request):
+            raise PermissionDenied
+        today = timezone.localdate()
+        raw_from, raw_to = request.GET.get("date_from"), request.GET.get("date_to")
+        error = ""
+        if raw_from or raw_to:
+            try:
+                date_from, date_to = date.fromisoformat(raw_from or ""), date.fromisoformat(raw_to or "")
+            except ValueError:
+                error = "Укажите обе даты"
+            else:
+                if date_from > date_to:
+                    error = "Начало периода позже конца"
+                elif (date_to - date_from).days >= reports.MAX_DAYS:
+                    error = "Период — не больше года"
+                else:
+                    response = HttpResponse(
+                        reports.workbook(date_from, date_to),
+                        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    )
+                    response["Content-Disposition"] = f'attachment; filename="sales_{date_from}_{date_to}.xlsx"'
+                    return response
+        context = {
+            **self.admin_site.each_context(request), "opts": self.model._meta, "title": "Выгрузка для бухгалтера",
+            "error": error, "vat": settings.FISCAL_VAT_PERCENT,
+            "date_from": raw_from or today.replace(day=1).isoformat(), "date_to": raw_to or today.isoformat(),
+        }
+        return TemplateResponse(request, "admin/orders/sales_report.html", context)

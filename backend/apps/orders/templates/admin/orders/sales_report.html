@@ -1,0 +1,21 @@
+{% extends "admin/base_site.html" %}
+
+{% block extrastyle %}{{ block.super }}{% include "admin/orders/desk_styles.html" %}{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs"><a href="{% url 'admin:index' %}">Начало</a> › Выгрузка для бухгалтера</div>
+{% endblock %}
+
+{% block content %}
+<div class="desk-card">
+  <h2>Excel за период</h2>
+  <p class="desk-muted">Лист «Реализации» — по дате передачи в доставку, с НДС {{ vat }} % внутри суммы, себестоимостью и IMEI.
+    Лист «Возвраты» — по дате возврата денег. Даты включительно, не больше года.</p>
+  {% if error %}<p class="desk-problems">{{ error }}</p>{% endif %}
+  <form class="desk-search" method="get">
+    <label>С <input type="date" name="date_from" value="{{ date_from }}" required></label>
+    <label>по <input type="date" name="date_to" value="{{ date_to }}" required></label>
+    <button type="submit" class="button default">Скачать Excel</button>
+  </form>
+</div>
+{% endblock %}
