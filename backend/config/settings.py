@@ -95,8 +95,10 @@ REST_FRAMEWORK = {
     },
 }
 
-# Адреса своих прокси (Next.js, nginx на этом же сервере): им доверяем X-Forwarded-For
+# Адреса своих прокси (nginx на этом же сервере): им доверяем заголовок X-Real-IP
 TRUSTED_PROXIES = env.list("TRUSTED_PROXIES", default=["127.0.0.1", "::1"])
+# Общий секрет с витриной Next.js: её серверные запросы не ограничиваются. Пусто — лимит для всех.
+INTERNAL_API_TOKEN = env("INTERNAL_API_TOKEN", default="")
 
 # Комиссия эквайринга (Payme/Click) в процентах — уменьшает бюджет подарка
 CARD_COMMISSION_PCT = Decimal(env("CARD_COMMISSION_PCT", default="0"))

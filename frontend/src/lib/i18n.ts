@@ -69,6 +69,8 @@ const ru = {
   notFoundText: "Возможно, товар сняли с продажи. Попробуйте поиск.",
   apiDown: "Не удалось загрузить данные магазина. Проверьте, что сервер Django запущен.",
   retry: "Повторить",
+  productDescription: (name: string) =>
+    `${name} — с подарком: чехол, защитное стекло или зарядка на выбор. Доставка по Узбекистану бесплатно.`,
 };
 
 export type Dictionary = typeof ru;
@@ -136,6 +138,8 @@ const uz: Dictionary = {
   notFoundText: "Ehtimol, mahsulot sotuvdan olingan. Qidiruvdan foydalaning.",
   apiDown: "Doʻkon maʼlumotlarini yuklab boʻlmadi. Django serveri ishga tushirilganini tekshiring.",
   retry: "Qayta urinish",
+  productDescription: (name: string) =>
+    `${name} — sovgʻa bilan: gʻilof, himoya oynasi yoki quvvatlagich. Oʻzbekiston boʻylab yetkazib berish bepul.`,
 };
 
 const DICTIONARIES: Record<Locale, Dictionary> = { ru, uz };

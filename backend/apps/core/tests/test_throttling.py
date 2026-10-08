@@ -7,10 +7,12 @@ pytestmark = pytest.mark.django_db
 
 SUGGEST = "/api/v1/catalog/search/suggest/"
 CATEGORIES = "/api/v1/catalog/categories/"
+TOKEN = "internal-test-token"
 
 
 @pytest.fixture(autouse=True)
-def low_limits(monkeypatch):
+def low_limits(monkeypatch, settings):
+    settings.INTERNAL_API_TOKEN = TOKEN
     cache.clear()
     monkeypatch.setattr(ClientRateThrottle, "THROTTLE_RATES", {"anon": "3/min", "search": "2/min"})
     yield
@@ -18,23 +20,30 @@ def low_limits(monkeypatch):
 
 
 class FakeRequest:
-    def __init__(self, remote, forwarded=None):
-        self.META = {"REMOTE_ADDR": remote}
-        if forwarded:
-            self.META["HTTP_X_FORWARDED_FOR"] = forwarded
+    def __init__(self, remote, **headers):
+        self.META = {"REMOTE_ADDR": remote, **headers}
 
 
 @pytest.mark.parametrize(
-    "remote, forwarded, expected",
+    "remote, headers, expected",
     [
-        ("8.8.8.8", None, "8.8.8.8"),  # напрямую из интернета
-        ("8.8.8.8", "1.1.1.1", "8.8.8.8"),  # чужой прокси не может подставить адрес
-        ("127.0.0.1", "6.6.6.6, 9.9.9.9", "9.9.9.9"),  # адрес, который дописал наш nginx
-        ("127.0.0.1", None, None),  # серверная отрисовка витрины — без лимита
+        ("8.8.8.8", {}, "8.8.8.8"),  # напрямую из интернета
+        ("8.8.8.8", {"HTTP_X_REAL_IP": "1.1.1.1"}, "8.8.8.8"),  # чужой узел не может подставить адрес
+        ("127.0.0.1", {"HTTP_X_REAL_IP": "9.9.9.9"}, "9.9.9.9"),  # адрес, который записал наш nginx
+        ("127.0.0.1", {"HTTP_X_FORWARDED_FOR": "6.6.6.6"}, "127.0.0.1"),  # X-Forwarded-For не доверяем
+        ("127.0.0.1", {}, "127.0.0.1"),  # без заголовков — общий счётчик, а не безлимит
+        ("127.0.0.1", {"HTTP_X_INTERNAL_TOKEN": TOKEN}, None),  # серверная отрисовка витрины
+        ("8.8.8.8", {"HTTP_X_INTERNAL_TOKEN": "guess"}, "8.8.8.8"),  # неверный токен ничего не даёт
     ],
 )
-def test_client_ident(remote, forwarded, expected):
-    assert client_ident(FakeRequest(remote, forwarded)) == expected
+def test_client_ident(remote, headers, expected):
+    assert client_ident(FakeRequest(remote, **headers)) == expected
+
+
+def test_no_token_configured_means_no_exemption(settings):
+    settings.INTERNAL_API_TOKEN = ""
+
+    assert client_ident(FakeRequest("127.0.0.1", HTTP_X_INTERNAL_TOKEN="")) == "127.0.0.1"
 
 
 def get(client, path, **headers):
@@ -54,13 +63,19 @@ def test_search_has_its_own_stricter_limit(client):
     assert statuses == [200, 200, 429]
 
 
-def test_visitors_behind_the_proxy_are_counted_separately(client):
+def test_spoofed_forwarded_for_does_not_reset_the_limit(client):
+    statuses = [get(client, CATEGORIES, HTTP_X_FORWARDED_FOR=f"10.0.0.{n}") for n in range(4)]
+
+    assert statuses[-1] == 429
+
+
+def test_visitors_behind_nginx_are_counted_separately(client):
     for _ in range(3):
-        get(client, CATEGORIES, HTTP_X_FORWARDED_FOR="1.1.1.1")
+        get(client, CATEGORIES, HTTP_X_REAL_IP="1.1.1.1")
 
-    assert get(client, CATEGORIES, HTTP_X_FORWARDED_FOR="1.1.1.1") == 429
-    assert get(client, CATEGORIES, HTTP_X_FORWARDED_FOR="2.2.2.2") == 200
+    assert get(client, CATEGORIES, HTTP_X_REAL_IP="1.1.1.1") == 429
+    assert get(client, CATEGORIES, HTTP_X_REAL_IP="2.2.2.2") == 200
 
 
-def test_server_side_rendering_is_not_limited(client):
-    assert {get(client, CATEGORIES) for _ in range(10)} == {200}
+def test_server_side_rendering_with_token_is_not_limited(client):
+    assert {get(client, CATEGORIES, HTTP_X_INTERNAL_TOKEN=TOKEN) for _ in range(10)} == {200}

@@ -120,3 +120,18 @@ class FacetsView(APIView):
         if query:
             queryset = search_and_sort(queryset, query, "relevance")
         return Response(compute_facets(queryset, category))
+
+
+class SitemapView(APIView):
+    """Адреса для sitemap.xml витрины: все категории и опубликованные модели."""
+
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        active = ProductModel.objects.filter(status=Status.ACTIVE).order_by("slug")
+        return Response(
+            {
+                "categories": list(Category.objects.order_by("pk").values_list("slug", flat=True)),
+                "products": list(active.values_list("slug", flat=True)),
+            }
+        )

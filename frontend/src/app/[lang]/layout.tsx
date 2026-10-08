@@ -10,6 +10,7 @@ import { LOCALES, isLocale } from "@/lib/i18n";
 import { fontClasses } from "../fonts";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.SITE_URL ?? "http://localhost:3000"),
   title: { default: "Sovgʻa — смартфоны с подарком", template: "%s — Sovgʻa" },
   description: "Смартфоны, планшеты и аксессуары в Узбекистане. Подарок к каждому смартфону, доставка бесплатно.",
 };

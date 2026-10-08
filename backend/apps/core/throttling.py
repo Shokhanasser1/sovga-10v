@@ -1,24 +1,35 @@
 """Ограничение частоты запросов к публичному API по посетителю.
 
-Браузер ходит в API через Next.js (а в проде ещё и через nginx). Next.js пробрасывает
-X-Forwarded-For как есть, nginx дописывает в конец настоящий адрес клиента. Поэтому:
-- запрос от доверенного прокси с X-Forwarded-For — считаем по последнему адресу цепочки;
-- от доверенного прокси без заголовка — это серверная отрисовка витрины, не ограничиваем;
-- напрямую из интернета — по адресу отправителя, заголовок не учитываем.
+Схема доверия (при сомнении — ограничиваем, а не пропускаем):
+- серверная отрисовка витрины присылает секретный X-Internal-Token — её не ограничиваем;
+- от доверенного прокси (nginx на этом сервере) берём адрес из X-Real-IP: nginx
+  перезаписывает этот заголовок (`proxy_set_header X-Real-IP $remote_addr`), подделать нельзя;
+- X-Forwarded-For не используем: Next.js пробрасывает его от клиента как есть;
+- всё остальное считаем по адресу отправителя. Запросы с 127.0.0.1 без заголовков
+  попадают в общий счётчик — это безопасно, хоть и строго.
 """
+
+import hmac
 
 from django.conf import settings
 from rest_framework.throttling import SimpleRateThrottle
 
 
+def is_internal(request) -> bool:
+    expected = settings.INTERNAL_API_TOKEN
+    given = request.META.get("HTTP_X_INTERNAL_TOKEN", "")
+    return bool(expected) and hmac.compare_digest(given.encode(), expected.encode())
+
+
 def client_ident(request) -> str | None:
-    remote = request.META.get("REMOTE_ADDR", "")
-    if remote not in settings.TRUSTED_PROXIES:
-        return remote
-    forwarded = request.META.get("HTTP_X_FORWARDED_FOR", "")
-    if not forwarded:
+    if is_internal(request):
         return None
-    return forwarded.split(",")[-1].strip() or None
+    remote = request.META.get("REMOTE_ADDR", "")
+    if remote in settings.TRUSTED_PROXIES:
+        real_ip = request.META.get("HTTP_X_REAL_IP", "").strip()
+        if real_ip:
+            return real_ip
+    return remote
 
 
 class ClientRateThrottle(SimpleRateThrottle):

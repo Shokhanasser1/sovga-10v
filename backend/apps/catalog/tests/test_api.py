@@ -110,3 +110,12 @@ def test_product_detail_includes_attribute_definitions(catalog, client):
         "code": "storage_gb", "name_ru": "storage_gb", "name_uz": "storage_gb", "unit": "",
         "type": "number", "level": "variant", "is_variant_axis": True, "comparison": "higher_better",
     }
+
+
+def test_sitemap_lists_categories_and_active_products(catalog, phones, apple, client):
+    ProductModel.objects.create(category=phones, brand=apple, slug="draft-phone",
+                                name_ru="Черновик", name_uz="Qoralama")
+
+    body = client.get(f"{BASE}/sitemap/").json()
+
+    assert body == {"categories": ["phones"], "products": ["iphone-16-pro"]}
