@@ -22,6 +22,8 @@ call npm install || exit /b 1
 call npm run build || exit /b 1
 
 echo.
-echo Готово. Дальше:
-echo   1. Создайте администратора:  cd backend  и  .venv\Scripts\python.exe manage.py createsuperuser
-echo   2. Запуск:  scripts\start.cmd
+echo Готово. Логины и пароли сотрудников — выше и в файле backend\demo-accounts.txt
+echo   Запуск:        scripts\start.cmd
+echo   Перед уроком:  scripts\reset-demo.cmd — магазин как новый
+echo   Настоящий магазин (DEMO_MODE=false в backend\.env): администратор —
+echo   cd backend  и  .venv\Scripts\python.exe manage.py createsuperuser
