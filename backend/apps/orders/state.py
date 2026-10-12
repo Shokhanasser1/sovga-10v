@@ -24,8 +24,8 @@ TRANSITIONS: dict[str, set[str]] = {
 
 FINAL = {status for status, targets in TRANSITIONS.items() if not targets}
 CANCELLABLE = {status for status, targets in TRANSITIONS.items() if S.CANCELLED in targets}
-# После оплаты отменяет менеджер — с возвратом денег.
-CUSTOMER_CANCELLABLE = {S.SOURCING, S.CONFIRMED, S.AWAITING_PAYMENT}
+# После оплаты отменяет менеджер — с возвратом денег. Оплату при получении — сам покупатель, пока не начали сборку.
+CUSTOMER_CANCELLABLE = {S.SOURCING, S.CONFIRMED, S.AWAITING_PAYMENT, S.COD}
 
 
 def can_transition(current: str, target: str) -> bool:

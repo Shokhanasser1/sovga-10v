@@ -22,7 +22,7 @@ from apps.sourcing.models import Offer, Reservation, Supplier, Warehouse
 from apps.sourcing.reservations import release
 
 from .models import Order, OrderLine
-from .services import OrderError, transition
+from .services import OrderError, money, transition
 
 S = Order.Status
 U = InventoryUnit.State
@@ -171,8 +171,11 @@ def ship(order: Order, carrier_code: str, handover: Handover, now: datetime, act
 
 @transaction.atomic
 def deliver(order: Order, now: datetime, actor: str) -> Order:
+    note = "Доставлен"
+    if order.payment_method == Order.PaymentMethod.COD:
+        note += f", оплата при получении: {money(order.total_uzs)} сум"
     delivered = transition(
-        order, S.DELIVERED, now, actor, note="Доставлен",
+        order, S.DELIVERED, now, actor, note=note,
         allowed_from={S.HANDED_TO_CARRIER}, denied_message="Заказ ещё не передан в доставку",
     )
     Shipment.objects.filter(order=delivered).update(delivered_at=now)

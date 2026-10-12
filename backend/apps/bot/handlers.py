@@ -71,6 +71,8 @@ def status_text(order: Order, previous: str | None, status: str, note: str) -> s
         lines.append(words["pay_now"])
     elif status == S.PAID:
         lines.append(words["paid"])
+    elif status == S.COD:
+        lines.append(words["cod"].format(total=f"{order.total_uzs:,}".replace(",", " ")))
     elif status == S.HANDED_TO_CARRIER and (shipment := Shipment.objects.filter(order=order).first()):
         if shipment.carrier == Shipment.Carrier.OWN:
             lines.append(words["courier"].format(name=shipment.courier_name, phone=shipment.courier_phone))
@@ -94,6 +96,8 @@ def notify_customer(payload: dict) -> None:
     order = Order.objects.select_related("customer").filter(number=payload["number"]).first()
     if order is None or not order.customer.telegram_chat_id:
         return
+    if payload["to"] == Order.Status.CONFIRMED and order.payment_method == Order.PaymentMethod.COD:
+        return  # платить онлайн не нужно — сразу придёт «Оплата при получении»
     send_message(
         order.customer.telegram_chat_id, status_text(order, payload.get("from"), payload["to"], payload.get("note", ""))
     )

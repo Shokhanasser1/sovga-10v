@@ -21,6 +21,11 @@ from .state import CUSTOMER_CANCELLABLE, can_transition
 S = Order.Status
 PRICE_LOCK = timedelta(minutes=30)
 SOURCING_SLA = timedelta(hours=2)
+PICKING_HOLD = timedelta(days=7)  # оплаченный или «при получении» товар держим, пока собирают и везут
+
+
+def money(amount: int) -> str:
+    return f"{amount:,}".replace(",", " ")
 
 
 class OrderError(Exception):
@@ -149,6 +154,8 @@ def create_order(
     # Вернувшемуся покупателю оформление подставит последний адрес.
     Address.objects.update_or_create(customer=customer, text=address.text, landmark=address.landmark)
     emit("order.created", _created_payload(order), now)
+    if order.status == S.CONFIRMED:
+        order = _to_cod_if_chosen(order, now)
     return order
 
 
@@ -196,7 +203,18 @@ def confirm_sourcing(order: Order, now: datetime, actor: str) -> Order:
     Reservation.objects.filter(ref=confirmed.number, released_at__isnull=True).update(
         expires_at=confirmed.price_lock_until
     )
-    return confirmed
+    return _to_cod_if_chosen(confirmed, now)
+
+
+def _to_cod_if_chosen(order: Order, now: datetime) -> Order:
+    """Товар подтверждён, а платить покупатель будет курьеру — заказ сразу идёт на сборку."""
+    if order.payment_method != Order.PaymentMethod.COD:
+        return order
+    cod = transition(order, S.COD, now, actor="system", note="Оплата при получении — можно собирать",
+                     allowed_from={S.CONFIRMED})
+    Reservation.objects.filter(ref=cod.number, released_at__isnull=True).update(expires_at=now + PICKING_HOLD)
+    emit("order.cod", {"number": cod.number, "total": cod.total_uzs}, now)
+    return cod
 
 
 def cancel_order(order: Order, now: datetime, actor: str, note: str = "", by_customer: bool = False) -> Order:

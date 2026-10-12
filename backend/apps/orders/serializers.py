@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -21,9 +22,14 @@ class CartItemSerializer(serializers.Serializer):
         return CartItem(data["sku"], data["qty"], data.get("gift_sku") or None)
 
 
+def payment_methods() -> list[str]:
+    """Чем покупатель может заплатить при оформлении."""
+    return ["card", "cod"] if settings.COD_ENABLED else ["card"]
+
+
 class QuoteRequestSerializer(serializers.Serializer):
     items = CartItemSerializer(many=True, max_length=10)
-    payment_method = serializers.ChoiceField(choices=["card", "installment"], default="card")
+    payment_method = serializers.ChoiceField(choices=["card", "installment", "cod"], default="card")
 
     def cart(self) -> list[CartItem]:
         return [CartItemSerializer().to_item(item) for item in self.validated_data["items"]]
@@ -36,10 +42,15 @@ class AddressSerializer(serializers.Serializer):
 
 class OrderCreateSerializer(QuoteRequestSerializer):
     payment_method = serializers.ChoiceField(
-        choices=["card"], error_messages={"invalid_choice": "Пока доступна только оплата картой"}
+        choices=["card", "cod"], error_messages={"invalid_choice": "Такой способ оплаты пока недоступен"}
     )
     address = AddressSerializer()
     comment = serializers.CharField(max_length=500, required=False, allow_blank=True, default="")
+
+    def validate_payment_method(self, value: str) -> str:
+        if value not in payment_methods():
+            raise serializers.ValidationError("Оплата при получении сейчас недоступна — оплатите картой онлайн")
+        return value
 
 
 def _gift(option) -> dict | None:
@@ -71,7 +82,10 @@ def quote_payload(result: Quote) -> dict:
                 "errors": line.errors,
             }
         )
-    return {"lines": lines, "total_uzs": result.total_uzs, "errors": result.errors, "can_order": result.can_order}
+    return {
+        "lines": lines, "total_uzs": result.total_uzs, "errors": result.errors, "can_order": result.can_order,
+        "payment_methods": payment_methods(),
+    }
 
 
 def order_payload(order: Order) -> dict:

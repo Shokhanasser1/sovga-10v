@@ -12,8 +12,8 @@ from apps.inventory.models import InventoryUnit
 
 from .fulfilment import PICKABLE, add_unit, deliver, mark_uzimei, picking_problems, remove_unit, ship, start_picking
 from .models import Order, OrderEvent, OrderLine, ReturnRequest
-from .returns import inspect_return, money, open_return, refund_return, reject_return, return_deadline
-from .services import cancel_order, confirm_sourcing
+from .returns import inspect_return, open_return, refund_return, reject_return, return_deadline
+from .services import cancel_order, confirm_sourcing, money
 from .state import CANCELLABLE
 
 S = Order.Status
@@ -24,7 +24,7 @@ SOON = timedelta(minutes=30)
 STAGES = [
     ("sourcing", "Ждут ответа поставщика", (S.SOURCING,), "sla_deadline", ("confirm", "Подтвердить у поставщика")),
     ("payment", "Ждут оплаты", (S.CONFIRMED, S.AWAITING_PAYMENT), "price_lock_until", None),
-    ("to_pick", "Оплачены — собрать", tuple(PICKABLE), "pick_deadline", ("start", "Начать сборку")),
+    ("to_pick", "К сборке", tuple(PICKABLE), "pick_deadline", ("start", "Начать сборку")),
     ("picking", "Собираются", (S.PICKING,), "pick_deadline", None),
     ("carrier", "У курьера", (S.HANDED_TO_CARRIER,), None, ("deliver", "Доставлен")),
     ("returns", "Возвраты", (S.RETURN_REQUESTED, S.INSPECTED), None, None),
@@ -51,6 +51,17 @@ def timer(deadline: datetime | None, now: datetime) -> tuple[str, str]:
     return f"осталось {duration(left)}", "soon" if left < SOON else "ok"
 
 
+def courier_collects(order: Order) -> str:
+    """Оплата при получении: сколько курьер берёт с покупателя — пока заказ не доставлен."""
+    if order.payment_method != Order.PaymentMethod.COD or order.status not in (S.COD, S.PICKING, S.HANDED_TO_CARRIER):
+        return ""
+    return f"При получении: взять {money(order.total_uzs)} сум"
+
+
+def refund_way(order: Order) -> str:
+    return "наличными или переводом" if order.payment_method == Order.PaymentMethod.COD else "в кабинете Payme / Click"
+
+
 def _notes(order: Order) -> list[str]:
     notes = [
         f"{request.supplier.name}: {request.get_status_display().lower()}"
@@ -61,6 +72,8 @@ def _notes(order: Order) -> list[str]:
     if shipment:
         notes.append(shipment.courier_name and f"{shipment.courier_name}, {shipment.courier_phone}"
                      or f"{shipment.service_name}, накладная {shipment.tracking}")
+    if collect := courier_collects(order):
+        notes.append(collect)
     return notes
 
 
@@ -132,7 +145,10 @@ def pick_context(order: Order, now: datetime) -> dict:
         "picking": order.status == S.PICKING,
         "handed": order.status == S.HANDED_TO_CARRIER,
         "can_cancel": order.status in CANCELLABLE,
-        "paid": order.status not in (S.SOURCING, S.CONFIRMED, S.AWAITING_PAYMENT),
+        "paid": order.payment_method != Order.PaymentMethod.COD
+        and order.status not in (S.SOURCING, S.CONFIRMED, S.AWAITING_PAYMENT),
+        "collect": courier_collects(order),
+        "refund_way": refund_way(order),
         "events": [
             {"at": event.created_at, "status": S(event.status_to).label, "note": event.note}
             for event in order.events.order_by("-created_at", "-pk")[:10]
@@ -217,7 +233,7 @@ def perform(order: Order, action: str, data, now: datetime, actor: str) -> tuple
         request = inspect_return(order, imeis, data.get("gift_returned") == "on", now, actor)
         if request.status == ReturnRequest.Status.REJECTED:
             return "IMEI не совпадает с проданными — возврат отклонён", "pick"
-        return f"Возврат принят. Верните покупателю {money(request.refund_amount_uzs)} сум в кабинете Payme / Click", "pick"
+        return f"Возврат принят. Верните покупателю {money(request.refund_amount_uzs)} сум {refund_way(order)}", "pick"
     if action == "return_reject":
         reject_return(order, data.get("note", ""), now, actor)
         return "Возврат отклонён", "pick"

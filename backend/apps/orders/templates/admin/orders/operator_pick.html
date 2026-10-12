@@ -73,6 +73,7 @@
     </div>
   {% endfor %}
   <p><strong>Итого: {{ total }}&nbsp;сум</strong></p>
+  {% if collect %}<p class="desk-collect">{{ collect }}</p>{% endif %}
 </div>
 
 {% if can_confirm or can_start or handed %}
@@ -154,7 +155,7 @@
 {% if inspected %}
   <div class="desk-card">
     <h2>Вернуть деньги</h2>
-    <p>Верните покупателю <strong>{{ return_refund }}&nbsp;сум</strong> в кабинете Payme / Click, затем отметьте здесь.</p>
+    <p>Верните покупателю <strong>{{ return_refund }}&nbsp;сум</strong> {{ refund_way }}, затем отметьте здесь.</p>
     <form method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'return_refund' %}">
       {% csrf_token %}<button type="submit" class="button default">Деньги возвращены</button>
     </form>

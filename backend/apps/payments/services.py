@@ -6,12 +6,11 @@ from django.db import transaction
 
 from apps.notifications.outbox import emit
 from apps.orders.models import Order
-from apps.orders.services import PRICE_LOCK, transition
+from apps.orders.services import PICKING_HOLD, PRICE_LOCK, transition
 from apps.sourcing.models import Reservation
 
 S = Order.Status
 PAYMENT_WINDOW = timedelta(hours=12)  # тайм-аут транзакции Payme
-PICKING_HOLD = timedelta(days=7)
 PAYABLE = {S.CONFIRMED, S.AWAITING_PAYMENT}
 REFUNDABLE = {S.PAID, S.PICKING}
 

@@ -9,15 +9,11 @@ from apps.delivery.models import Shipment
 from apps.inventory.models import InventoryUnit
 
 from .models import Order, ReturnRequest
-from .services import OrderError, transition
+from .services import OrderError, money, transition
 
 S = Order.Status
 R = ReturnRequest.Status
 U = InventoryUnit.State
-
-
-def money(amount: int) -> str:
-    return f"{amount:,}".replace(",", " ")
 
 
 def return_deadline(order: Order) -> datetime | None:

@@ -53,7 +53,8 @@ def test_cancel_only_before_shipping():
 
 
 def test_customer_cancels_only_unpaid_orders():
-    assert CUSTOMER_CANCELLABLE == {S.SOURCING, S.CONFIRMED, S.AWAITING_PAYMENT}
+    # Оплата при получении — тоже не оплачен: покупатель отменяет сам, пока не начали сборку.
+    assert CUSTOMER_CANCELLABLE == {S.SOURCING, S.CONFIRMED, S.AWAITING_PAYMENT, S.COD}
 
 
 def test_final_statuses_have_no_exits():

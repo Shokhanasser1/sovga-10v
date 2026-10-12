@@ -153,3 +153,27 @@ def test_return_messages(linked, telegram, shop, settings):
     assert "К возврату 14 080 000 сум" in messages(telegram)[-1]
     refund_return(first, NOW, actor="manager:anna")
     assert "Деньги возвращены: 14 080 000 сум" in messages(telegram)[-1]
+
+
+def test_cash_on_delivery_tells_what_to_pay_the_courier(linked, telegram, shop, settings):
+    settings.COD_ENABLED = True
+    Offer.objects.filter(variant=shop["phone"], warehouse__isnull=False).delete()
+    stock(shop["phone"], 5, supplier=Supplier.objects.create(name="Опт", connector_type=Supplier.Connector.TELEGRAM))
+    order = create_order(linked, [CartItem("IP16P-256-B", 1)], "cod", DeliveryAddress("Ташкент"), "", NOW)
+
+    confirm_sourcing(order, NOW, actor="manager:anna")
+
+    sent = messages(telegram)
+    assert not any("30 минут" in text for text in sent), "оплачивать онлайн не нужно"
+    assert "Оплата при получении" in sent[-1] and "14 080 000 сум" in sent[-1] and "курьеру" in sent[-1]
+
+
+def test_managers_hear_a_cash_on_delivery_order_can_be_picked(bot, telegram, customer, shop, settings):
+    settings.COD_ENABLED = True
+
+    order = create_order(customer, [CartItem("IP16P-256-B", 1)], "cod", DeliveryAddress("Ташкент"), "", NOW)
+
+    deliver_pending(NOW)
+    assert any(
+        order.number in text and "при получении" in text and "можно собирать" in text for text in telegram.sent("-100")
+    )

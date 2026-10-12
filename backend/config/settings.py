@@ -189,6 +189,9 @@ CLICK_SECRET_KEY = env("CLICK_SECRET_KEY", default="")
 CLICK_PAY_URL = env("CLICK_PAY_URL", default="https://my.click.uz/services/pay")
 # НДС в фискальном чеке, % (уточнить у бухгалтера)
 FISCAL_VAT_PERCENT = env.int("FISCAL_VAT_PERCENT", default=12)
+# Оплата при получении (курьеру — наличными или картой). Настоящему магазину — только если служба доставки
+# выдаёт фискальный чек при выдаче; в учебном режиме включена.
+COD_ENABLED = env.bool("COD_ENABLED", default=DEMO_MODE)
 # Адрес витрины — для возврата покупателя после оплаты
 SITE_URL = env("SITE_URL", default="http://localhost:3000")
 # Срок возврата товара надлежащего качества, дней с доставки (точный срок — вопрос юристу)

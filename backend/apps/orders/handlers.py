@@ -18,6 +18,14 @@ def notify_new_order(payload: dict) -> None:
     notify_managers(f"Новый заказ {payload['number']} на {_sum(payload['total'])} сум{waiting}\n{lines}")
 
 
+@register("order.cod")
+def notify_cod_order(payload: dict) -> None:
+    notify_managers(
+        f"Заказ {payload['number']} с оплатой при получении: {_sum(payload['total'])} сум — можно собирать. "
+        "Курьер возьмёт деньги при выдаче"
+    )
+
+
 @register("sourcing.declined")
 def notify_declined(payload: dict) -> None:
     notify_managers(
