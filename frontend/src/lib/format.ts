@@ -52,3 +52,11 @@ export function withVariant(name: string, axes: Record<string, AttrValue>, local
   const parts = Object.values(axes).map((value) => formatValue(value, "", locale));
   return [name, ...parts].join(" · ");
 }
+
+/** Абзацы описания товара: разделитель — пустая строка. */
+export function paragraphs(text: string): string[] {
+  return text
+    .split(/\r?\n\s*\r?\n/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}

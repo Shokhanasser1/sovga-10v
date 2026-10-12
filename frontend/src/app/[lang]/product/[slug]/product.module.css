@@ -23,3 +23,13 @@
   margin: 0 0 16px;
   font-size: clamp(1.3rem, 2.4vw, 1.75rem);
 }
+
+.description {
+  max-width: 68ch;
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.description p {
+  margin: 0 0 12px;
+}

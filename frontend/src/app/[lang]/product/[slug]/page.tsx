@@ -7,6 +7,7 @@ import { ProductGrid } from "@/components/ProductGrid";
 import { ProductJsonLd } from "@/components/ProductJsonLd";
 import { ProductPurchase } from "@/components/ProductPurchase";
 import { getAccessories, getOffers, getProduct } from "@/lib/api";
+import { paragraphs } from "@/lib/format";
 import { LOCALES, getDictionary, isLocale, localized } from "@/lib/i18n";
 
 import styles from "./product.module.css";
@@ -39,6 +40,8 @@ async function ProductContent({ params }: Pick<PageProps<"/[lang]/product/[slug]
   ]);
   if (!product) notFound();
   const dict = getDictionary(lang);
+  const text = lang === "uz" ? product.description_uz || product.description_ru : product.description_ru;
+  const description = paragraphs(text);
   return (
     <>
       <ProductJsonLd product={product} offers={offers} lang={lang} />
@@ -46,6 +49,16 @@ async function ProductContent({ params }: Pick<PageProps<"/[lang]/product/[slug]
         <Link href={`/${lang}/catalog/${product.category}`}>← {dict.catalog}</Link>
       </nav>
       <ProductPurchase product={product} lang={lang} />
+      {description.length > 0 && (
+        <section className={styles.section}>
+          <h2 className={`display ${styles.title}`}>{dict.description}</h2>
+          <div className={styles.description}>
+            {description.map((text) => (
+              <p key={text}>{text}</p>
+            ))}
+          </div>
+        </section>
+      )}
       {accessories.length > 0 && (
         <section className={styles.section}>
           <h2 className={`display ${styles.title}`}>{dict.accessories}</h2>

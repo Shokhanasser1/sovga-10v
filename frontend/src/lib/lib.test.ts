@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { apiUrl } from "./api-client";
 import { COMPARE_KEY, addToCompare, readCompare, removeFromCompare, type CompareItem } from "./compare-store";
-import { deliveryText, formatPriceFrom, formatSum, formatValue } from "./format";
+import { deliveryText, formatPriceFrom, formatSum, formatValue, paragraphs } from "./format";
 import { formatDate } from "./navigation";
 import { getDictionary, isLocale, localized, pluralRu, switchLocalePath } from "./i18n";
 
@@ -133,5 +133,16 @@ describe("formatDate", () => {
     expect(formatDate("2027-10-08", "ru")).toContain("8");
     expect(formatDate("2027-10-08", "ru")).toContain("2027");
     expect(formatDate("2027-01-01", "ru")).not.toContain("2026");
+  });
+});
+
+describe("paragraphs", () => {
+  it("splits a description by blank lines and drops empty parts", () => {
+    expect(paragraphs("Первый абзац.\nта же строка\n\n\n  Второй.  \r\n\r\nТретий")).toEqual([
+      "Первый абзац.\nта же строка",
+      "Второй.",
+      "Третий",
+    ]);
+    expect(paragraphs("   ")).toEqual([]);
   });
 });
