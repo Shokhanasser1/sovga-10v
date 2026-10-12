@@ -61,10 +61,14 @@ def _permissions(spec: list[str]) -> list[Permission]:
 
 
 def apply_roles() -> None:
-    """Создаёт роли или возвращает им права из списка выше."""
+    """Создаёт недостающие роли с правами из списка выше.
+
+    Существующие роли не трогаем: права, которые администратор роли добавил или забрал, переживают обновление.
+    """
     for name, spec in ROLES.items():
-        group, _ = Group.objects.get_or_create(name=name)
-        group.permissions.set(_permissions(spec))
+        group, created = Group.objects.get_or_create(name=name)
+        if created:
+            group.permissions.set(_permissions(spec))
 
 
 def new_password() -> str:

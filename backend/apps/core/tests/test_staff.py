@@ -57,7 +57,7 @@ def test_each_role_opens_only_its_own_pages(settings, role, allowed, denied):
     assert {url: status(client, url) for url in denied} == {url: 403 for url in denied}
 
 
-def test_roles_are_rebuilt_without_duplicates():
+def test_roles_are_created_without_duplicates():
     apply_roles()
     apply_roles()
 
@@ -121,3 +121,15 @@ def test_migrate_creates_roles_for_a_real_shop_too():
 
     assert set(Group.objects.values_list("name", flat=True)) == set(ROLES)
     assert Group.objects.get(name="Бухгалтер").permissions.filter(codename="view_salesreport").exists()
+    assert Group.objects.get(name="Менеджер").permissions.filter(content_type__app_label="warranty").exists()
+
+
+def test_migrate_keeps_rights_the_administrator_took_away():
+    """Обновление магазина (migrate) не возвращает права, которые администратор у роли забрал."""
+    operator = Group.objects.get(name="Оператор")
+    operator.permissions.remove(*operator.permissions.filter(codename="change_order"))
+
+    call_command("migrate", verbosity=0)
+    call_command("seed_demo", stdout=None)
+
+    assert not Group.objects.get(name="Оператор").permissions.filter(codename="change_order").exists()
