@@ -1,13 +1,16 @@
 """Рабочее место оператора: очередь заказов по этапам с таймерами и действия над заказом."""
 
 import re
+import secrets
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.db.models import OuterRef, Q, Subquery
 from django.http import Http404
 
 from apps.catalog.labels import variant_title
 from apps.delivery.carriers import Handover
+from apps.inventory.imei import with_check_digit
 from apps.inventory.models import InventoryUnit
 
 from .fulfilment import PICKABLE, add_unit, deliver, mark_uzimei, picking_problems, remove_unit, ship, start_picking
@@ -19,6 +22,7 @@ from .state import CANCELLABLE
 S = Order.Status
 PICK_WITHIN = timedelta(hours=4)  # от оплаты до передачи курьеру
 SOON = timedelta(minutes=30)
+SHELF_HINTS = 5
 
 # Этап: ключ, заголовок, статусы, срок, кнопка в очереди.
 STAGES = [
@@ -121,16 +125,40 @@ def find_orders(query: str) -> list[Order]:
     return list(Order.objects.filter(condition).select_related("customer").order_by("-created_at")[:20])
 
 
+def _learning_imei() -> str:
+    """Учебный режим: верный IMEI, которого ещё нет в системе, — как будто его прислал поставщик."""
+    while True:
+        imei = with_check_digit("86" + "".join(secrets.choice("0123456789") for _ in range(12)))
+        if not InventoryUnit.objects.filter(Q(imei1=imei) | Q(imei2=imei)).exists():
+            return imei
+
+
+def imei_hints(line: OrderLine) -> list[str]:
+    """Подсказки к полю IMEI: свой склад — устройства с полки; товар поставщика в учебном режиме — готовый IMEI."""
+    if line.offer and line.offer.is_own:
+        return list(
+            InventoryUnit.objects.filter(
+                variant=line.variant, warehouse=line.offer.warehouse, status=InventoryUnit.State.IN_STOCK,
+                order_line__isnull=True,
+            ).order_by("pk").values_list("imei1", flat=True)[:SHELF_HINTS]
+        )
+    return [_learning_imei()] if settings.DEMO_MODE else []
+
+
 def pick_context(order: Order, now: datetime) -> dict:
     lines = []
-    for line in order.lines.select_related("variant__product_model__category").order_by("pk"):
+    picking = order.status == S.PICKING
+    for line in order.lines.select_related("variant__product_model__category", "offer").order_by("pk"):
         units = list(line.units.order_by("pk"))
+        serialized = line.variant.product_model.category.is_serialized
+        missing = max(line.qty - len(units), 0)
         lines.append({
             "line": line,
             "label": variant_title(line.variant),
-            "serialized": line.variant.product_model.category.is_serialized,
+            "serialized": serialized,
             "units": units,
-            "missing": max(line.qty - len(units), 0),
+            "missing": missing,
+            "hints": imei_hints(line) if picking and serialized and missing else [],
         })
     return {
         "order": order,

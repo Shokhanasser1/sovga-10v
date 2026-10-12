@@ -63,11 +63,19 @@
           <form class="desk-scan" method="post" action="{% url 'admin:orders_operatordesk_action' order.number 'add_unit' %}">
             {% csrf_token %}<input type="hidden" name="line" value="{{ item.line.pk }}">
             <input name="imei" inputmode="numeric" maxlength="15" placeholder="IMEI — сканер или вручную"
-                   autocomplete="off" {% if item.line.pk == focus_line %}autofocus{% endif %} required>
+                   autocomplete="off" {% if item.hints %}list="imei-{{ item.line.pk }}"{% endif %}
+                   {% if item.line.pk == focus_line %}autofocus{% endif %} required>
+            {% if item.hints %}
+              <datalist id="imei-{{ item.line.pk }}">{% for hint in item.hints %}<option value="{{ hint }}">{% endfor %}</datalist>
+            {% endif %}
             <label><input type="checkbox" name="uzimei"> проверен в UzIMEI — зарегистрирован</label>
             <button type="submit" class="button">Добавить</button>
             <span class="desk-muted">ещё {{ item.missing }}</span>
           </form>
+          {% if item.hints %}
+            <p class="desk-muted">{% if item.line.offer.is_own %}На полке{% else %}Учебный IMEI от поставщика{% endif %}:
+              {{ item.hints|join:", " }}</p>
+          {% endif %}
         {% endif %}
       {% endif %}
     </div>

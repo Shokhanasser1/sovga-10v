@@ -146,3 +146,41 @@ def test_timers(order):
     late = next(section for section in sections(now + timedelta(hours=5)) if section["key"] == "picking")
     assert late["rows"][0]["timer"].startswith("просрочен на")
     assert late["rows"][0]["timer_class"] == "late"
+
+
+def test_pick_page_suggests_devices_from_the_shelf(admin_client, order, units):
+    add_unit(phone_line(order), imei(0), NOW, actor="operator:anna")
+
+    page = admin_client.get(pick_url(order)).content.decode()
+
+    assert f'<option value="{imei(1)}">' in page and f'<option value="{imei(2)}">' in page
+    assert f'<option value="{imei(0)}">' not in page, "уже собранное устройство не предлагаем"
+
+
+def test_learning_mode_suggests_a_valid_imei_for_a_supplier_device(admin_client, shop, settings):
+    from apps.customers.services import customer_for_phone
+    from apps.inventory.imei import is_valid_imei
+    from apps.orders.fulfilment import start_picking
+    from apps.orders.quote import CartItem
+    from apps.orders.services import DeliveryAddress, confirm_sourcing, create_order
+    from apps.payments.services import confirm_payment, start_payment
+    from apps.sourcing.models import Offer, Supplier
+
+    from .conftest import stock
+
+    Offer.objects.filter(variant=shop["phone"], warehouse__isnull=False).delete()
+    stock(shop["phone"], 5, supplier=Supplier.objects.create(name="Опт", connector_type=Supplier.Connector.TELEGRAM))
+    supplier_order = create_order(customer_for_phone("+998901234567"), [CartItem("IP16P-256-B", 1)], "card",
+                                  DeliveryAddress("Ташкент"), "", NOW)
+    confirm_sourcing(supplier_order, NOW, actor="operator:anna")
+    start_payment(supplier_order, NOW, actor="payme")
+    confirm_payment(supplier_order, NOW, actor="payme", provider="Payme")
+    start_picking(supplier_order, NOW, actor="operator:anna")
+
+    settings.DEMO_MODE = False
+    assert "<option value=" not in admin_client.get(pick_url(supplier_order)).content.decode()
+
+    settings.DEMO_MODE = True
+    page = admin_client.get(pick_url(supplier_order)).content.decode()
+    suggested = page.split('<option value="', 1)[1].split('"', 1)[0]
+    assert is_valid_imei(suggested) and not InventoryUnit.objects.filter(imei1=suggested).exists()
