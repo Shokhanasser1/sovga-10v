@@ -101,3 +101,12 @@ def test_history_has_cash_on_delivery_orders(learning_mode):
     assert completed.events.filter(note__startswith="Доставлен, оплата при получении").exists()
     today = timezone.localdate()
     assert any(row[1] == completed.number and row[-1] == "При получении" for row in sales_rows(today - timedelta(days=60), today))
+
+
+def test_fresh_orders_are_not_late_right_after_a_reset(learning_mode):
+    from apps.orders.desk import sections
+
+    seed()
+
+    to_pick = next(section for section in sections(timezone.now()) if section["key"] == "to_pick")
+    assert to_pick["rows"] and all(row["timer_class"] != "late" for row in to_pick["rows"])

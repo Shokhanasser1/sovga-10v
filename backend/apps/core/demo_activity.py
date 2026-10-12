@@ -117,8 +117,8 @@ STORIES = [
     Story(10, 3, (("IP17P-256-ORG", 1),), "click", "delivered"),
     Story(11, 2, (("RN14-256-BLK", 1),), "payme", "shipped"),
     Story(0, 1, (("IP17-256-BLK", 1),), "payme", "picking"),
-    Story(4, 0.2, (("H400-256-BLK", 1),), "cod", "paid", "Позвоните перед доставкой"),
-    Story(1, 0.15, (("A56-128-BLK", 1),), "click", "paid"),
+    Story(1, 0.1, (("A56-128-BLK", 1),), "click", "paid"),
+    Story(4, 0.05, (("H400-256-BLK", 1),), "cod", "paid", "Позвоните перед доставкой"),
     Story(2, 0.01, (("XWS4-47-BLK", 1),), "click", "confirmed"),
     Story(3, 0.005, (("ZFLIP7-256-BLU", 1),), "payme", "sourcing", "Можно ли доставить сегодня?"),
 ]
