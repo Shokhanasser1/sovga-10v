@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
+from django.conf import settings
 from django.db import transaction
 
 from apps.catalog.models import Variant
@@ -95,6 +96,23 @@ def _ask_suppliers(order: Order, now: datetime) -> None:
         emit("sourcing.requested", {"request": request.pk}, now)
 
 
+# Заказ с оплатой при получении ещё не закрыт: товар держится, деньги не получены.
+OPEN_COD = {S.SOURCING, S.CONFIRMED, S.COD, S.PICKING, S.HANDED_TO_CARRIER}
+
+
+def _check_cod_limits(customer: Customer, total_uzs: int) -> None:
+    """Товар такого заказа держится неделю без оплаты — один открытый заказ на покупателя и потолок суммы."""
+    if Order.objects.filter(customer=customer, payment_method=Order.PaymentMethod.COD, status__in=OPEN_COD).exists():
+        raise OrderError(
+            "У вас уже есть заказ с оплатой при получении — дождитесь доставки или отмените его. "
+            "Этот заказ можно оплатить картой онлайн"
+        )
+    if total_uzs > settings.COD_MAX_UZS:
+        raise OrderError(
+            f"При получении можно оплатить заказ до {money(settings.COD_MAX_UZS)} сум — оплатите картой онлайн"
+        )
+
+
 def _check_margin(order: Order) -> None:
     """Маржа заказа после подарков ниже минимальной по правилам наценки — сообщаем менеджерам."""
     lines = list(order.lines.select_related("variant__product_model__category"))
@@ -128,6 +146,9 @@ def create_order(
     result = quote(items, payment_method, now)
     if not result.can_order:
         raise OrderError(_quote_problems(result))
+    if payment_method == Order.PaymentMethod.COD:
+        Customer.objects.select_for_update().get(pk=customer.pk)  # два оформления сразу — по очереди
+        _check_cod_limits(customer, result.total_uzs)
     rate = result.lines[0].variant.price_snapshots.order_by("-computed_at", "-pk").first().rate
     order = Order.objects.create(
         customer=customer, status=S.SOURCING, payment_method=payment_method, address_text=address.text,

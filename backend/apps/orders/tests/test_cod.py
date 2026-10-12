@@ -140,3 +140,25 @@ def test_courier_cash_is_not_offered_to_card_orders(shop, customer, cod_on):
 
     assert order.status == S.CONFIRMED
     assert not OutboxEvent.objects.filter(type="order.cod").exists()
+
+
+def test_one_open_cod_order_per_customer(shop, customer, cod_on):
+    """Товар такого заказа держится неделю без оплаты — нельзя занять им весь склад."""
+    cod_order(customer)
+
+    with pytest.raises(OrderError, match="уже есть заказ с оплатой при получении"):
+        cod_order(customer)
+
+    assert create_order(customer, [CartItem(PHONE_SKU, 1)], "card", DeliveryAddress("Ташкент"), "", NOW)
+    Order.objects.filter(payment_method="cod").update(status=S.DELIVERED)
+    assert cod_order(customer).status == S.COD
+
+
+def test_cod_order_total_is_limited(shop, customer, cod_on, settings):
+    settings.COD_MAX_UZS = 20_000_000
+
+    with pytest.raises(OrderError, match="20 000 000"):
+        create_order(customer, [CartItem(PHONE_SKU, 2)], "cod", DeliveryAddress("Ташкент"), "", NOW)
+
+    assert not Order.objects.exists()
+    assert not Reservation.objects.filter(released_at__isnull=True).exists()
