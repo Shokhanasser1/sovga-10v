@@ -90,3 +90,14 @@ def test_simulator_dates_history_messages_by_their_events(learning_mode):
     order = Order.objects.filter(status=S.COMPLETED).order_by("created_at").first()
     first = DemoMessage.objects.filter(chat_id=DEMO_MANAGER_CHAT, text__contains=order.number).order_by("pk").first()
     assert first.created_at == order.created_at, "«Новый заказ» — в минуту оформления"
+
+
+def test_history_has_cash_on_delivery_orders(learning_mode):
+    seed()
+
+    cod = Order.objects.filter(payment_method=Order.PaymentMethod.COD)
+    assert {S.COD, S.HANDED_TO_CARRIER, S.COMPLETED} <= set(cod.values_list("status", flat=True))
+    completed = cod.get(status=S.COMPLETED)
+    assert completed.events.filter(note__startswith="Доставлен, оплата при получении").exists()
+    today = timezone.localdate()
+    assert any(row[1] == completed.number and row[-1] == "При получении" for row in sales_rows(today - timedelta(days=60), today))

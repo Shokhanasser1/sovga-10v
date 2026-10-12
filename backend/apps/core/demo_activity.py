@@ -87,6 +87,7 @@ class Story:
 # Этапы: sourcing (ждёт поставщика), declined (поставщик отказал), confirmed (ждёт оплаты),
 # cancelled (покупатель отменил), paid, refunded_unshipped (деньги вернули до отгрузки), picking, shipped,
 # delivered, return_requested, inspected, refunded (возврат завершён), completed.
+# Оплата: payme, click или cod — при получении (такой заказ сам идёт к сборке, «paid» — ждёт сборки).
 STORIES = [
     Story(0, 44, (("IP17P-256-ORG", 1),), "payme", "completed", "Позвоните за час до доставки"),
     Story(1, 42, (("A56-128-BLK", 1),), "click", "completed"),
@@ -99,6 +100,7 @@ STORIES = [
     Story(8, 30, (("GW8-44-SLV", 1), ("XM6-BLK", 1)), "payme", "completed"),
     Story(9, 28, (("R14C-128-BLK", 2),), "click", "completed", "Два телефона — для родителей"),
     Story(10, 27, (("IP16E-128-BLK", 1),), "payme", "cancelled"),
+    Story(6, 26, (("A36-128-BLK", 1),), "cod", "completed", "Оплачу наличными курьеру"),
     Story(11, 25, (("S25E-256-SLV", 1),), "payme", "declined"),
     Story(0, 24, (("CASE-IP17P-CLR", 1), ("GLS-IP17P", 1)), "click", "completed"),
     Story(1, 22, (("A36-128-BLK", 1),), "payme", "completed"),
@@ -111,9 +113,11 @@ STORIES = [
     Story(8, 6, (("IP16-128-BLK", 1),), "payme", "return_requested",
           return_reason="Купили в подарок, а у именинника уже есть такой"),
     Story(9, 5, (("TABS10FE-128-GRY", 1),), "payme", "delivered"),
+    Story(5, 4, (("R14C-128-BLK", 1),), "cod", "shipped"),
     Story(10, 3, (("IP17P-256-ORG", 1),), "click", "delivered"),
     Story(11, 2, (("RN14-256-BLK", 1),), "payme", "shipped"),
     Story(0, 1, (("IP17-256-BLK", 1),), "payme", "picking"),
+    Story(4, 0.2, (("H400-256-BLK", 1),), "cod", "paid", "Позвоните перед доставкой"),
     Story(1, 0.15, (("A56-128-BLK", 1),), "click", "paid"),
     Story(2, 0.01, (("XWS4-47-BLK", 1),), "click", "confirmed"),
     Story(3, 0.005, (("ZFLIP7-256-BLU", 1),), "payme", "sourcing", "Можно ли доставить сегодня?"),
@@ -190,7 +194,8 @@ def _handover(row: DemoCustomer, order: Order) -> tuple[str, Handover]:
 def _play(story: Story, index: int, customers: list[Customer], now: datetime) -> Order:
     row, customer = CUSTOMERS[story.customer], customers[story.customer]
     moment = _moment(now, story.days_ago, index)
-    order = create_order(customer, _items(story, moment), Order.PaymentMethod.CARD,
+    method = Order.PaymentMethod.COD if story.provider == "cod" else Order.PaymentMethod.CARD
+    order = create_order(customer, _items(story, moment), method,
                          DeliveryAddress(row.address, row.landmark), story.comment, moment)
     Order.objects.filter(pk=order.pk).update(created_at=moment)
     if order.status == S.SOURCING:
@@ -209,7 +214,8 @@ def _play(story: Story, index: int, customers: list[Customer], now: datetime) ->
     if stop < 2:
         return order
     moment += timedelta(minutes=10)
-    _pay(order, story.provider, moment)
+    if story.provider != "cod":
+        _pay(order, story.provider, moment)
     if story.stage == "refunded_unshipped":
         simulate_payme(order, "refund", moment + timedelta(hours=3))
         return order
