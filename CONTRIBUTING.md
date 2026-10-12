@@ -30,7 +30,7 @@ backend/apps/
   warranty/       гарантийные случаи по IMEI
   notifications/  outbox (надёжная доставка событий) и клиент Telegram
   bot/            Telegram-бот: команды, кнопки поставщиков, имитация
-  core/           фоновые задачи (run_jobs), демо-данные (seed_demo), лимиты запросов
+  core/           фоновые задачи (run_jobs), демо-данные (seed_demo: каталог — demo_catalog.py, история — demo_activity.py), лимиты запросов
 frontend/src/
   app/[lang]/     страницы витрины на русском и узбекском
   components/     части страниц
