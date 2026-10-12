@@ -323,16 +323,22 @@ const ENUM_LABELS: Record<Locale, Record<string, string>> = {
   ru: {
     black: "Чёрный", white: "Белый", blue: "Синий", green: "Зелёный", titanium: "Титан",
     grey: "Серый", clear: "Прозрачный", nano_esim: "nano-SIM + eSIM", esim_only: "Только eSIM",
-    dual_sim: "2 SIM", "usb-c": "USB-C", lightning: "Lightning",
+    dual_sim: "2 SIM", "usb-c": "USB-C", lightning: "Lightning", silver: "Серебристый", gold: "Золотой",
+    orange: "Оранжевый", purple: "Фиолетовый", pink: "Розовый", yellow: "Жёлтый", in_ear: "Вкладыши",
+    on_ear: "Накладные", over_ear: "Полноразмерные",
   },
   uz: {
     black: "Qora", white: "Oq", blue: "Koʻk", green: "Yashil", titanium: "Titan", grey: "Kulrang",
     clear: "Shaffof", nano_esim: "nano-SIM + eSIM", esim_only: "Faqat eSIM", dual_sim: "2 SIM",
-    "usb-c": "USB-C", lightning: "Lightning",
+    "usb-c": "USB-C", lightning: "Lightning", silver: "Kumushrang", gold: "Oltinrang", orange: "Toʻq sariq",
+    purple: "Binafsharang", pink: "Pushti", yellow: "Sariq", in_ear: "Quloq ichiga", on_ear: "Quloq ustiga",
+    over_ear: "Toʻliq oʻlchamli",
   },
 };
 
-const UNIT_LABELS: Record<string, string> = { ГБ: "GB", "мА·ч": "mA·soat", Вт: "Vt", г: "g" };
+const UNIT_LABELS: Record<string, string> = {
+  ГБ: "GB", "мА·ч": "mA·soat", Вт: "Vt", г: "g", мм: "mm", "дн.": "kun", ч: "soat", "шт.": "dona",
+};
 
 export function unitLabel(unit: string, locale: Locale): string {
   return locale === "uz" ? (UNIT_LABELS[unit] ?? unit) : unit;
@@ -345,5 +351,6 @@ export function enumLabel(value: string, locale: Locale): string {
 /** Цвета для образцов в выборе варианта. */
 export const SWATCHES: Record<string, string> = {
   black: "#1d1f24", white: "#f2f2ee", blue: "#3b5b8f", green: "#5d7a5a", titanium: "#a39b8b",
-  grey: "#7d828a", clear: "#e4ecef",
+  grey: "#7d828a", clear: "#e4ecef", silver: "#d9dadc", gold: "#e8d3b0", orange: "#e07a3f", purple: "#b9a7d6",
+  pink: "#f0c5cf", yellow: "#f2dc7d",
 };

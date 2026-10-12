@@ -1,6 +1,6 @@
 /** Рисованные силуэты устройств — пока в каталоге нет фотографий. */
 
-export type DeviceKind = "phone" | "tablet" | "case" | "charger" | "audio";
+export type DeviceKind = "phone" | "tablet" | "case" | "charger" | "audio" | "watch" | "glass" | "powerbank";
 
 const KIND_BY_CATEGORY: Record<string, DeviceKind> = {
   smartphones: "phone",
@@ -8,6 +8,9 @@ const KIND_BY_CATEGORY: Record<string, DeviceKind> = {
   cases: "case",
   chargers: "charger",
   headphones: "audio",
+  smartwatches: "watch",
+  "screen-protectors": "glass",
+  "power-banks": "powerbank",
 };
 
 const DEFAULT_COLOR: Record<DeviceKind, string> = {
@@ -16,6 +19,9 @@ const DEFAULT_COLOR: Record<DeviceKind, string> = {
   case: "#1d1f24",
   charger: "#f2f2ee",
   audio: "#f2f2ee",
+  watch: "#2b2f3a",
+  glass: "#e4ecef",
+  powerbank: "#2b2f3a",
 };
 
 export function kindFor(categorySlug: string): DeviceKind {
@@ -87,7 +93,59 @@ function Audio({ color }: { color: string }) {
   );
 }
 
-const SHAPES = { phone: Phone, tablet: Tablet, case: Case, charger: Charger, audio: Audio };
+function Watch({ color }: { color: string }) {
+  return (
+    <>
+      <rect x="74" y="14" width="52" height="60" rx="10" fill="#141a2e" opacity="0.75" />
+      <rect x="74" y="166" width="52" height="60" rx="10" fill="#141a2e" opacity="0.75" />
+      <rect x="56" y="64" width="88" height="112" rx="26" fill={color} stroke={OUTLINE} />
+      <rect x="64" y="72" width="72" height="96" rx="20" fill="#0d1018" />
+      <rect x="144" y="96" width="7" height="22" rx="3.5" fill={color} stroke={OUTLINE} />
+    </>
+  );
+}
+
+function Glass({ color }: { color: string }) {
+  return (
+    <>
+      <rect x="58" y="16" width="84" height="208" rx="18" fill={color} opacity="0.75" stroke={OUTLINE} />
+      <rect x="88" y="24" width="24" height="7" rx="3.5" fill="#141a2e" opacity="0.25" />
+      <line x1="70" y1="120" x2="128" y2="62" stroke="#fff" strokeWidth="6" opacity="0.7" />
+      <line x1="72" y1="146" x2="130" y2="88" stroke="#fff" strokeWidth="3" opacity="0.6" />
+    </>
+  );
+}
+
+function PowerBank({ color }: { color: string }) {
+  return (
+    <>
+      <rect x="54" y="30" width="92" height="180" rx="20" fill={color} stroke={OUTLINE} />
+      <rect x="88" y="40" width="24" height="8" rx="4" fill="#0d1018" opacity="0.6" />
+      {[0, 1, 2, 3].map((dot) => (
+        <circle key={dot} cx={82 + dot * 12} cy="168" r="3.5" fill="#7fd6a1" opacity={dot < 3 ? 1 : 0.3} />
+      ))}
+    </>
+  );
+}
+
+const SHAPES = {
+  phone: Phone,
+  tablet: Tablet,
+  case: Case,
+  charger: Charger,
+  audio: Audio,
+  watch: Watch,
+  glass: Glass,
+  powerbank: PowerBank,
+};
+
+const LABEL_Y: Partial<Record<DeviceKind, number>> = {
+  tablet: 196,
+  audio: 186,
+  charger: 132,
+  watch: 124,
+  powerbank: 140,
+};
 
 export function DeviceArt({
   kind,
@@ -102,7 +160,7 @@ export function DeviceArt({
 }) {
   const fill = color ?? DEFAULT_COLOR[kind];
   const Shape = SHAPES[kind];
-  const labelY = kind === "tablet" ? 196 : kind === "audio" ? 186 : kind === "charger" ? 132 : 200;
+  const labelY = LABEL_Y[kind] ?? 200;
   return (
     <svg className={className} viewBox="0 0 200 240" role="img" aria-label={label ?? ""}>
       <Shape color={fill} />
@@ -113,7 +171,7 @@ export function DeviceArt({
           textAnchor="middle"
           fontSize="11"
           fontFamily="var(--font-body)"
-          fill={isLight(fill) ? "#586378" : "rgb(255 255 255 / 0.7)"}
+          fill={isLight(fill) && kind !== "watch" ? "#586378" : "rgb(255 255 255 / 0.7)"}
         >
           {label}
         </text>

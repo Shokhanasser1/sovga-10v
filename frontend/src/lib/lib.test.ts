@@ -4,7 +4,17 @@ import { apiUrl } from "./api-client";
 import { COMPARE_KEY, addToCompare, readCompare, removeFromCompare, type CompareItem } from "./compare-store";
 import { deliveryText, formatPriceFrom, formatSum, formatValue, paragraphs } from "./format";
 import { formatDate } from "./navigation";
-import { getDictionary, isLocale, localized, pluralRu, switchLocalePath } from "./i18n";
+import { kindFor } from "../components/DeviceArt";
+import {
+  SWATCHES,
+  enumLabel,
+  getDictionary,
+  isLocale,
+  localized,
+  pluralRu,
+  switchLocalePath,
+  unitLabel,
+} from "./i18n";
 
 const NBSP = " ";
 
@@ -144,5 +154,32 @@ describe("paragraphs", () => {
       "Третий",
     ]);
     expect(paragraphs("   ")).toEqual([]);
+  });
+});
+
+describe("labels for the demo catalog", () => {
+  const colors = ["silver", "gold", "orange", "purple", "pink", "yellow"];
+
+  it("names every color with a swatch on both languages", () => {
+    expect(Object.keys(SWATCHES)).toEqual(expect.arrayContaining(colors));
+    for (const value of Object.keys(SWATCHES)) {
+      expect(enumLabel(value, "ru")).not.toBe(value);
+      expect(enumLabel(value, "uz")).not.toBe(value);
+    }
+    expect(enumLabel("in_ear", "ru")).toBe("Вкладыши");
+    expect(enumLabel("over_ear", "uz")).not.toBe("over_ear");
+  });
+
+  it("translates the new units", () => {
+    expect(unitLabel("мм", "uz")).toBe("mm");
+    expect(unitLabel("дн.", "uz")).toBe("kun");
+    expect(unitLabel("ч", "uz")).toBe("soat");
+    expect(unitLabel("шт.", "uz")).toBe("dona");
+  });
+
+  it("draws watches, screen protectors and power banks with their own shapes", () => {
+    expect(kindFor("smartwatches")).toBe("watch");
+    expect(kindFor("screen-protectors")).toBe("glass");
+    expect(kindFor("power-banks")).toBe("powerbank");
   });
 });
