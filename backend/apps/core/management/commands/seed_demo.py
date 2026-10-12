@@ -77,7 +77,7 @@ class Command(BaseCommand):
             f"Курс {rate.cbu_rate} на {rate.date}."
         )
         if orders:
-            self.stdout.write(f"История магазина: {orders} заказов, покупатели и переписка в «Имитации Telegram».")
+            self.stdout.write(f"История магазина — заказов: {orders}; покупатели и переписка в «Имитации Telegram».")
         if staff:
             self.stdout.write("")
             self.stdout.write("Сотрудники — вход в админку http://localhost:8000/admin:")

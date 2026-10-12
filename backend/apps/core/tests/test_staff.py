@@ -111,3 +111,13 @@ def test_real_shop_gets_roles_but_no_ready_made_accounts(settings, accounts_file
     assert set(Group.objects.values_list("name", flat=True)) == set(ROLES)
     assert not User.objects.filter(is_staff=True).exists()
     assert not accounts_file.exists()
+
+
+def test_migrate_creates_roles_for_a_real_shop_too():
+    """Роли приходят с migrate — настоящему магазину не нужен seed_demo с учебным каталогом."""
+    Group.objects.all().delete()
+
+    call_command("migrate", verbosity=0)
+
+    assert set(Group.objects.values_list("name", flat=True)) == set(ROLES)
+    assert Group.objects.get(name="Бухгалтер").permissions.filter(codename="view_salesreport").exists()
