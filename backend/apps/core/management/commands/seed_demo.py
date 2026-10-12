@@ -3,6 +3,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
@@ -19,6 +20,7 @@ from apps.catalog.models import (
 )
 from apps.catalog.search import rebuild_search_index
 from apps.core import demo_catalog as data
+from apps.core.demo_activity import create_history
 from apps.inventory.imei import with_check_digit
 from apps.inventory.models import InventoryUnit
 from apps.inventory.services import receive_unit
@@ -63,12 +65,16 @@ class Command(BaseCommand):
         self._pricing_rules(categories)
         rate = ExchangeRate.objects.order_by("-date").first()
         result = reprice_all(rate, now)
+        # История магазина — только в учебном режиме: в настоящем магазине выдуманные заказы не нужны.
+        orders = create_history(now) if settings.DEMO_MODE else 0
         rebuild_search_index()
         refresh_listing_cache(now)
         self.stdout.write(
             f"Демо-каталог готов: {len(products)} товаров, цен обновлено {result.changed}. "
             f"Курс {rate.cbu_rate} на {rate.date}."
         )
+        if orders:
+            self.stdout.write(f"История магазина: {orders} заказов, покупатели и переписка в «Имитации Telegram».")
 
     def _categories(self) -> dict[str, Category]:
         result = {}
