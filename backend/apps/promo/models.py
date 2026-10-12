@@ -6,19 +6,20 @@ from apps.catalog.models import Brand, Category
 
 
 class GiftPolicy(models.Model):
-    name = models.CharField(max_length=200)
-    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE)
-    brand = models.ForeignKey(Brand, null=True, blank=True, on_delete=models.CASCADE)
-    min_price_uzs = models.PositiveBigIntegerField(null=True, blank=True)
-    max_price_uzs = models.PositiveBigIntegerField(null=True, blank=True)
+    name = models.CharField(max_length=200, verbose_name="название")
+    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, verbose_name="категория")
+    brand = models.ForeignKey(Brand, null=True, blank=True, on_delete=models.CASCADE, verbose_name="бренд")
+    min_price_uzs = models.PositiveBigIntegerField(null=True, blank=True, verbose_name="цена товара от, сум")
+    max_price_uzs = models.PositiveBigIntegerField(null=True, blank=True, verbose_name="цена товара до, сум")
     budget_pct_of_net_margin = models.DecimalField(
-        max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)]
+        max_digits=5, decimal_places=2, validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="бюджет, % чистой маржи"
     )
-    budget_cap_uzs = models.PositiveBigIntegerField()
-    priority = models.IntegerField(default=0)
-    active_from = models.DateTimeField(null=True, blank=True)
-    active_to = models.DateTimeField(null=True, blank=True)
-    is_active = models.BooleanField(default=True)
+    budget_cap_uzs = models.PositiveBigIntegerField(verbose_name="бюджет не больше, сум")
+    priority = models.IntegerField(default=0, verbose_name="приоритет")
+    active_from = models.DateTimeField(null=True, blank=True, verbose_name="действует с")
+    active_to = models.DateTimeField(null=True, blank=True, verbose_name="действует по")
+    is_active = models.BooleanField(default=True, verbose_name="активен")
 
     class Meta:
         verbose_name = "правило подарка"

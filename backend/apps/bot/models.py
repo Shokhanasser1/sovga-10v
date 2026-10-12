@@ -34,11 +34,11 @@ class DemoMessage(models.Model):
         OUT = "out", "Бот → чат"
         IN = "in", "Чат → бот"
 
-    chat_id = models.BigIntegerField(db_index=True)
-    direction = models.CharField(max_length=3, choices=Direction.choices)
-    text = models.TextField()
-    reply_markup = models.JSONField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    chat_id = models.BigIntegerField(db_index=True, verbose_name="чат")
+    direction = models.CharField(max_length=3, choices=Direction.choices, verbose_name="направление")
+    text = models.TextField(verbose_name="текст")
+    reply_markup = models.JSONField(null=True, blank=True, verbose_name="кнопки")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="создан")
 
     class Meta:
         ordering = ["pk"]

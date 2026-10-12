@@ -10,9 +10,9 @@ from .imei import validate_imei
 
 
 class PurchaseBatch(models.Model):
-    supplier = models.ForeignKey(Supplier, null=True, blank=True, on_delete=models.SET_NULL)
-    received_at = models.DateTimeField(default=timezone.now)
-    note = models.CharField(max_length=200, blank=True)
+    supplier = models.ForeignKey(Supplier, null=True, blank=True, on_delete=models.SET_NULL, verbose_name="поставщик")
+    received_at = models.DateTimeField(default=timezone.now, verbose_name="получена")
+    note = models.CharField(max_length=200, blank=True, verbose_name="заметка")
 
     class Meta:
         verbose_name = "партия закупки"
@@ -35,27 +35,29 @@ class InventoryUnit(models.Model):
         RETURNED = "returned", "Возвращён"
         DEFECTIVE = "defective", "Брак"
 
-    variant = models.ForeignKey(Variant, on_delete=models.PROTECT, related_name="units")
-    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="units")
-    imei1 = models.CharField(max_length=15, blank=True, validators=[validate_imei])
-    imei2 = models.CharField(max_length=15, blank=True, validators=[validate_imei])
-    serial = models.CharField(max_length=64, blank=True)
+    variant = models.ForeignKey(Variant, on_delete=models.PROTECT, related_name="units", verbose_name="вариант товара")
+    warehouse = models.ForeignKey(Warehouse, on_delete=models.PROTECT, related_name="units", verbose_name="склад")
+    imei1 = models.CharField(max_length=15, blank=True, validators=[validate_imei], verbose_name="IMEI 1")
+    imei2 = models.CharField(max_length=15, blank=True, validators=[validate_imei], verbose_name="IMEI 2")
+    serial = models.CharField(max_length=64, blank=True, verbose_name="серийный номер")
     uzimei_status = models.CharField(
-        max_length=15, choices=UzimeiStatus.choices, default=UzimeiStatus.UNKNOWN
+        max_length=15, choices=UzimeiStatus.choices, default=UzimeiStatus.UNKNOWN, verbose_name="UzIMEI"
     )
     purchase_batch = models.ForeignKey(
-        PurchaseBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name="units"
+        PurchaseBatch, null=True, blank=True, on_delete=models.SET_NULL, related_name="units",
+        verbose_name="партия закупки"
     )
-    cost_usd = models.DecimalField(max_digits=12, decimal_places=2)
-    status = models.CharField(max_length=10, choices=State.choices, default=State.IN_STOCK)
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="себестоимость, $")
+    status = models.CharField(max_length=10, choices=State.choices, default=State.IN_STOCK, verbose_name="статус")
     order_line = models.ForeignKey(
         "orders.OrderLine", null=True, blank=True, on_delete=models.SET_NULL, related_name="units",
-        help_text="Строка заказа, под которую собрано или продано устройство",
+        help_text="Строка заказа, под которую собрано или продано устройство", verbose_name="строка заказа",
     )
     received_for_order = models.BooleanField(
-        default=False, help_text="Принято от поставщика под заказ: при отмене заказа не возвращается на склад"
+        default=False, help_text="Принято от поставщика под заказ: при отмене заказа не возвращается на склад",
+        verbose_name="принят под заказ"
     )
-    received_at = models.DateTimeField(auto_now_add=True)
+    received_at = models.DateTimeField(auto_now_add=True, verbose_name="принят")
 
     class Meta:
         verbose_name = "устройство на складе"

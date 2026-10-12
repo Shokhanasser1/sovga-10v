@@ -9,14 +9,16 @@ class OutboxEvent(models.Model):
         DONE = "done", "Доставлено"
         FAILED = "failed", "Не удалось"
 
-    type = models.CharField(max_length=64, db_index=True)
-    payload = models.JSONField(default=dict)
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
-    attempts = models.PositiveSmallIntegerField(default=0)
-    next_attempt_at = models.DateTimeField(db_index=True)
-    last_error = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    processed_at = models.DateTimeField(null=True, blank=True)
+    type = models.CharField(max_length=64, db_index=True, verbose_name="тип")
+    payload = models.JSONField(default=dict, verbose_name="данные")
+    status = models.CharField(
+        max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True, verbose_name="статус"
+    )
+    attempts = models.PositiveSmallIntegerField(default=0, verbose_name="попыток")
+    next_attempt_at = models.DateTimeField(db_index=True, verbose_name="следующая попытка")
+    last_error = models.TextField(blank=True, verbose_name="последняя ошибка")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="создан")
+    processed_at = models.DateTimeField(null=True, blank=True, verbose_name="обработано")
 
     class Meta:
         verbose_name = "событие"

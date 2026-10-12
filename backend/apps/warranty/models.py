@@ -11,14 +11,16 @@ class WarrantyCase(models.Model):
         CLOSED = "closed", "Выдан покупателю"
         REJECTED = "rejected", "Отказ: не гарантийный случай"
 
-    unit = models.ForeignKey("inventory.InventoryUnit", on_delete=models.PROTECT, related_name="warranty_cases")
-    complaint = models.CharField(max_length=500, help_text="Что не так со слов покупателя")
-    service_center = models.CharField(max_length=200, blank=True)
-    status = models.CharField(max_length=12, choices=Status.choices, default=Status.OPEN)
-    note = models.TextField(blank=True, help_text="Что сделали: ремонт, замена, причина отказа")
-    opened_at = models.DateTimeField()
-    opened_by = models.CharField(max_length=100)
-    closed_at = models.DateTimeField(null=True, blank=True)
+    unit = models.ForeignKey(
+        "inventory.InventoryUnit", on_delete=models.PROTECT, related_name="warranty_cases", verbose_name="устройство"
+    )
+    complaint = models.CharField(max_length=500, help_text="Что не так со слов покупателя", verbose_name="жалоба")
+    service_center = models.CharField(max_length=200, blank=True, verbose_name="сервисный центр")
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.OPEN, verbose_name="статус")
+    note = models.TextField(blank=True, help_text="Что сделали: ремонт, замена, причина отказа", verbose_name="заметка")
+    opened_at = models.DateTimeField(verbose_name="открыт")
+    opened_by = models.CharField(max_length=100, verbose_name="кто открыл")
+    closed_at = models.DateTimeField(null=True, blank=True, verbose_name="закрыт")
 
     class Meta:
         ordering = ["-opened_at"]

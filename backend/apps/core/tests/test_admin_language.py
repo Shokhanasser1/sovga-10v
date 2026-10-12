@@ -28,3 +28,19 @@ def test_admin_index_names_the_shop(admin_client):
 
     assert "Sovgʻa" in page and "Администрирование Django" not in page
     assert all(name in page for name in ("Каталог", "Товары", "Склад", "Поставщики", "Заказы", "Платежи"))
+
+
+def test_every_admin_column_and_form_field_has_a_russian_label():
+    models = set()
+    for model, model_admin in admin.site._registry.items():
+        if model._meta.app_label != "auth":
+            models |= {model._meta.concrete_model, *(inline.model for inline in model_admin.inlines)}
+    english = [
+        f"{model._meta.label}.{field.name}"
+        for model in models
+        for field in model._meta.get_fields()
+        # Подпись задана явно, а не собрана Django из имени поля («is accessory»)
+        if getattr(field, "concrete", False) and not field.auto_created
+        and str(field.verbose_name) == field.name.replace("_", " ")
+    ]
+    assert sorted(english) == []

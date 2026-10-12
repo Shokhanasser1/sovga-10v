@@ -17,31 +17,34 @@ class Supplier(models.Model):
 
     DEFAULT_TTL_HOURS = {"api": 1, "sheet": 24, "file": 24, "telegram": 6}
 
-    name = models.CharField(max_length=200)
-    connector_type = models.CharField(max_length=10, choices=Connector.choices)
-    feed_url = models.URLField(blank=True, help_text="CSV (Google Sheets) или JSON (API)")
+    name = models.CharField(max_length=200, verbose_name="название")
+    connector_type = models.CharField(max_length=10, choices=Connector.choices, verbose_name="как присылает прайс")
+    feed_url = models.URLField(blank=True, help_text="CSV (Google Sheets) или JSON (API)", verbose_name="адрес прайса")
     columns = models.JSONField(
         default=dict,
         blank=True,
         help_text='{"code": "Артикул", "name": "Наименование", "price": "Цена $", "qty": "Остаток"}',
+        verbose_name="колонки прайса",
     )
     ttl_hours = models.PositiveIntegerField(
-        null=True, blank=True, help_text="Пусто — значение по умолчанию для типа подключения"
+        null=True, blank=True, help_text="Пусто — значение по умолчанию для типа подключения",
+        verbose_name="прайс годен, ч"
     )
     reliability = models.DecimalField(
         max_digits=3,
         decimal_places=2,
         default=Decimal("1.00"),
         validators=[MinValueValidator(Decimal("0.10")), MaxValueValidator(Decimal("1.00"))],
-        help_text="1.00 — не подводит; меньше — чаще отказывает",
+        help_text="1.00 — не подводит; меньше — чаще отказывает", verbose_name="надёжность",
     )
-    lead_time_days = models.PositiveIntegerField(default=1)
-    payment_terms = models.CharField(max_length=200, blank=True)
-    contact = models.CharField(max_length=200, blank=True)
+    lead_time_days = models.PositiveIntegerField(default=1, verbose_name="срок поставки, дн.")
+    payment_terms = models.CharField(max_length=200, blank=True, verbose_name="условия оплаты")
+    contact = models.CharField(max_length=200, blank=True, verbose_name="контакт")
     telegram_chat_id = models.BigIntegerField(
-        null=True, blank=True, help_text="Заполняет бот, когда поставщик открывает ссылку для подключения"
+        null=True, blank=True, help_text="Заполняет бот, когда поставщик открывает ссылку для подключения",
+        verbose_name="чат Telegram"
     )
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, verbose_name="активен")
 
     class Meta:
         verbose_name = "поставщик"
@@ -59,9 +62,9 @@ class Supplier(models.Model):
 
 
 class Warehouse(models.Model):
-    name = models.CharField(max_length=200)
-    address = models.CharField(max_length=300, blank=True)
-    is_active = models.BooleanField(default=True)
+    name = models.CharField(max_length=200, verbose_name="название")
+    address = models.CharField(max_length=300, blank=True, verbose_name="адрес")
+    is_active = models.BooleanField(default=True, verbose_name="активен")
 
     class Meta:
         verbose_name = "склад"
@@ -72,18 +75,18 @@ class Warehouse(models.Model):
 
 
 class Offer(models.Model):
-    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="offers")
+    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="offers", verbose_name="вариант товара")
     supplier = models.ForeignKey(
-        Supplier, null=True, blank=True, on_delete=models.CASCADE, related_name="offers"
+        Supplier, null=True, blank=True, on_delete=models.CASCADE, related_name="offers", verbose_name="поставщик"
     )
     warehouse = models.ForeignKey(
-        Warehouse, null=True, blank=True, on_delete=models.CASCADE, related_name="offers"
+        Warehouse, null=True, blank=True, on_delete=models.CASCADE, related_name="offers", verbose_name="склад"
     )
-    cost_usd = models.DecimalField(max_digits=12, decimal_places=2)
-    qty_available = models.PositiveIntegerField(default=0)
-    lead_time_days = models.PositiveIntegerField(default=0)
-    last_confirmed_at = models.DateTimeField()
-    is_active = models.BooleanField(default=True)
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="себестоимость, $")
+    qty_available = models.PositiveIntegerField(default=0, verbose_name="в наличии")
+    lead_time_days = models.PositiveIntegerField(default=0, verbose_name="срок поставки, дн.")
+    last_confirmed_at = models.DateTimeField(verbose_name="подтверждено")
+    is_active = models.BooleanField(default=True, verbose_name="активен")
 
     class Meta:
         verbose_name = "предложение"
@@ -113,9 +116,11 @@ class Offer(models.Model):
 
 
 class SupplierSkuMap(models.Model):
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="sku_maps")
-    supplier_code = models.CharField(max_length=100)
-    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="supplier_codes")
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="sku_maps", verbose_name="поставщик")
+    supplier_code = models.CharField(max_length=100, verbose_name="артикул поставщика")
+    variant = models.ForeignKey(
+        Variant, on_delete=models.CASCADE, related_name="supplier_codes", verbose_name="вариант товара"
+    )
 
     class Meta:
         verbose_name = "артикул поставщика"
@@ -129,13 +134,13 @@ class SupplierSkuMap(models.Model):
 
 
 class SupplierFeedRun(models.Model):
-    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="feed_runs")
-    started_at = models.DateTimeField()
-    rows_total = models.PositiveIntegerField(default=0)
-    rows_matched = models.PositiveIntegerField(default=0)
-    rows_unmatched = models.PositiveIntegerField(default=0)
-    rows_invalid = models.PositiveIntegerField(default=0)
-    error = models.TextField(blank=True)
+    supplier = models.ForeignKey(Supplier, on_delete=models.CASCADE, related_name="feed_runs", verbose_name="поставщик")
+    started_at = models.DateTimeField(verbose_name="начата")
+    rows_total = models.PositiveIntegerField(default=0, verbose_name="строк всего")
+    rows_matched = models.PositiveIntegerField(default=0, verbose_name="сопоставлено")
+    rows_unmatched = models.PositiveIntegerField(default=0, verbose_name="не сопоставлено")
+    rows_invalid = models.PositiveIntegerField(default=0, verbose_name="с ошибками")
+    error = models.TextField(blank=True, verbose_name="ошибка")
 
     class Meta:
         verbose_name = "загрузка прайса"
@@ -152,15 +157,17 @@ class SupplierFeedRow(models.Model):
         UNMATCHED = "unmatched", "Ждёт сопоставления"
         INVALID = "invalid", "Ошибка в строке"
 
-    run = models.ForeignKey(SupplierFeedRun, on_delete=models.CASCADE, related_name="rows")
-    supplier_code = models.CharField(max_length=100)
-    name = models.CharField(max_length=300, blank=True)
-    price_usd = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
-    qty = models.PositiveIntegerField(null=True, blank=True)
-    raw = models.JSONField(default=dict)
-    status = models.CharField(max_length=10, choices=Status.choices)
-    error = models.CharField(max_length=200, blank=True)
-    variant = models.ForeignKey(Variant, null=True, blank=True, on_delete=models.SET_NULL)
+    run = models.ForeignKey(SupplierFeedRun, on_delete=models.CASCADE, related_name="rows", verbose_name="загрузка")
+    supplier_code = models.CharField(max_length=100, verbose_name="артикул поставщика")
+    name = models.CharField(max_length=300, blank=True, verbose_name="название")
+    price_usd = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, verbose_name="цена, $")
+    qty = models.PositiveIntegerField(null=True, blank=True, verbose_name="количество")
+    raw = models.JSONField(default=dict, verbose_name="исходные данные")
+    status = models.CharField(max_length=10, choices=Status.choices, verbose_name="статус")
+    error = models.CharField(max_length=200, blank=True, verbose_name="ошибка")
+    variant = models.ForeignKey(
+        Variant, null=True, blank=True, on_delete=models.SET_NULL, verbose_name="вариант товара"
+    )
 
     class Meta:
         verbose_name = "строка прайса"
@@ -171,13 +178,13 @@ class SupplierFeedRow(models.Model):
 
 
 class Reservation(models.Model):
-    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name="reservations")
-    qty = models.PositiveIntegerField()
-    ref = models.CharField(max_length=64, help_text="Корзина или заказ")
-    is_soft = models.BooleanField(help_text="Товар поставщика до его подтверждения")
-    expires_at = models.DateTimeField()
-    released_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name="reservations", verbose_name="предложение")
+    qty = models.PositiveIntegerField(verbose_name="количество")
+    ref = models.CharField(max_length=64, help_text="Корзина или заказ", verbose_name="заказ")
+    is_soft = models.BooleanField(help_text="Товар поставщика до его подтверждения", verbose_name="мягкий резерв")
+    expires_at = models.DateTimeField(verbose_name="действует до")
+    released_at = models.DateTimeField(null=True, blank=True, verbose_name="снят")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="создан")
 
     class Meta:
         verbose_name = "резерв"

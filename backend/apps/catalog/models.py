@@ -9,15 +9,18 @@ from .search_text import normalize
 
 class Category(models.Model):
     parent = models.ForeignKey(
-        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="children"
+        "self", null=True, blank=True, on_delete=models.PROTECT, related_name="children",
+        verbose_name="родительская категория"
     )
-    slug = models.SlugField(unique=True)
-    name_ru = models.CharField(max_length=200)
-    name_uz = models.CharField(max_length=200)
+    slug = models.SlugField(unique=True, verbose_name="адрес в ссылке")
+    name_ru = models.CharField(max_length=200, verbose_name="название (рус.)")
+    name_uz = models.CharField(max_length=200, verbose_name="название (узб.)")
     is_serialized = models.BooleanField(
-        default=False, help_text="Поштучный учёт по IMEI/SN (телефоны, планшеты)"
+        default=False, help_text="Поштучный учёт по IMEI/SN (телефоны, планшеты)", verbose_name="учёт по IMEI"
     )
-    warranty_months = models.PositiveSmallIntegerField(default=12, help_text="Срок гарантии, месяцев с продажи")
+    warranty_months = models.PositiveSmallIntegerField(
+        default=12, help_text="Срок гарантии, месяцев с продажи", verbose_name="гарантия, мес."
+    )
 
     class Meta:
         verbose_name = "категория"
@@ -84,22 +87,22 @@ class AttributeDefinition(models.Model):
         NONE = "none", "Не сравнивается"
 
     category = models.ForeignKey(
-        Category, on_delete=models.CASCADE, related_name="attribute_definitions"
+        Category, on_delete=models.CASCADE, related_name="attribute_definitions", verbose_name="категория"
     )
-    code = models.SlugField(max_length=64)
-    name_ru = models.CharField(max_length=100)
-    name_uz = models.CharField(max_length=100)
-    type = models.CharField(max_length=10, choices=Type.choices)
-    unit = models.CharField(max_length=20, blank=True)
-    enum_values = models.JSONField(default=list, blank=True)
-    level = models.CharField(max_length=10, choices=Level.choices, default=Level.MODEL)
-    is_variant_axis = models.BooleanField(default=False)
-    is_required = models.BooleanField(default=False)
-    is_facet = models.BooleanField(default=False)
+    code = models.SlugField(max_length=64, verbose_name="код")
+    name_ru = models.CharField(max_length=100, verbose_name="название (рус.)")
+    name_uz = models.CharField(max_length=100, verbose_name="название (узб.)")
+    type = models.CharField(max_length=10, choices=Type.choices, verbose_name="тип")
+    unit = models.CharField(max_length=20, blank=True, verbose_name="единица")
+    enum_values = models.JSONField(default=list, blank=True, verbose_name="значения списка")
+    level = models.CharField(max_length=10, choices=Level.choices, default=Level.MODEL, verbose_name="уровень")
+    is_variant_axis = models.BooleanField(default=False, verbose_name="ось варианта")
+    is_required = models.BooleanField(default=False, verbose_name="обязательная")
+    is_facet = models.BooleanField(default=False, verbose_name="фильтр в каталоге")
     comparison = models.CharField(
-        max_length=15, choices=Comparison.choices, default=Comparison.NONE
+        max_length=15, choices=Comparison.choices, default=Comparison.NONE, verbose_name="сравнение"
     )
-    sort_order = models.PositiveIntegerField(default=0)
+    sort_order = models.PositiveIntegerField(default=0, verbose_name="порядок")
 
     class Meta:
         verbose_name = "характеристика"
@@ -140,8 +143,8 @@ class Status(models.TextChoices):
 
 
 class Brand(models.Model):
-    slug = models.SlugField(unique=True)
-    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True, verbose_name="адрес в ссылке")
+    name = models.CharField(max_length=100, verbose_name="название")
 
     class Meta:
         verbose_name = "бренд"
@@ -152,24 +155,26 @@ class Brand(models.Model):
 
 
 class ProductModel(models.Model):
-    category = models.ForeignKey(Category, on_delete=models.PROTECT, related_name="product_models")
-    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="product_models")
-    slug = models.SlugField(max_length=200, unique=True)
-    name_ru = models.CharField(max_length=200)
-    name_uz = models.CharField(max_length=200)
-    description_ru = models.TextField(blank=True)
-    description_uz = models.TextField(blank=True)
-    attributes = models.JSONField(default=dict, blank=True)
-    seo_title_ru = models.CharField(max_length=200, blank=True)
-    seo_title_uz = models.CharField(max_length=200, blank=True)
-    seo_description_ru = models.CharField(max_length=300, blank=True)
-    seo_description_uz = models.CharField(max_length=300, blank=True)
-    is_accessory = models.BooleanField(default=False)
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
-    search_text = models.TextField(blank=True, editable=False)
+    category = models.ForeignKey(
+        Category, on_delete=models.PROTECT, related_name="product_models", verbose_name="категория"
+    )
+    brand = models.ForeignKey(Brand, on_delete=models.PROTECT, related_name="product_models", verbose_name="бренд")
+    slug = models.SlugField(max_length=200, unique=True, verbose_name="адрес в ссылке")
+    name_ru = models.CharField(max_length=200, verbose_name="название (рус.)")
+    name_uz = models.CharField(max_length=200, verbose_name="название (узб.)")
+    description_ru = models.TextField(blank=True, verbose_name="описание (рус.)")
+    description_uz = models.TextField(blank=True, verbose_name="описание (узб.)")
+    attributes = models.JSONField(default=dict, blank=True, verbose_name="характеристики")
+    seo_title_ru = models.CharField(max_length=200, blank=True, verbose_name="SEO-заголовок (рус.)")
+    seo_title_uz = models.CharField(max_length=200, blank=True, verbose_name="SEO-заголовок (узб.)")
+    seo_description_ru = models.CharField(max_length=300, blank=True, verbose_name="SEO-описание (рус.)")
+    seo_description_uz = models.CharField(max_length=300, blank=True, verbose_name="SEO-описание (узб.)")
+    is_accessory = models.BooleanField(default=False, verbose_name="аксессуар")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT, verbose_name="статус")
+    search_text = models.TextField(blank=True, editable=False, verbose_name="текст для поиска")
     # Кэш для листинга, обновляет run_jobs: цена «от» и есть ли хоть что-то в продаже
-    price_from_uzs = models.PositiveBigIntegerField(null=True, blank=True, editable=False)
-    is_available = models.BooleanField(default=False, editable=False)
+    price_from_uzs = models.PositiveBigIntegerField(null=True, blank=True, editable=False, verbose_name="цена от, сум")
+    is_available = models.BooleanField(default=False, editable=False, verbose_name="в продаже")
 
     class Meta:
         verbose_name = "товар"
@@ -211,19 +216,21 @@ DIGITS_VALIDATOR = RegexValidator(r"^\d+$", "Только цифры")
 
 class Variant(models.Model):
     product_model = models.ForeignKey(
-        ProductModel, on_delete=models.CASCADE, related_name="variants"
+        ProductModel, on_delete=models.CASCADE, related_name="variants", verbose_name="товар"
     )
-    sku = models.CharField(max_length=64, unique=True)
-    barcodes = models.JSONField(default=list, blank=True)
-    axes = models.JSONField(default=dict, blank=True)
-    axes_key = models.CharField(max_length=500, editable=False)
-    attributes = models.JSONField(default=dict, blank=True)
-    mxik_code = models.CharField(max_length=17, validators=[MXIK_VALIDATOR])
-    package_code = models.CharField(max_length=20, validators=[DIGITS_VALIDATOR])
-    weight_g = models.PositiveIntegerField(null=True, blank=True)
-    images = models.JSONField(default=list, blank=True)
-    giftable = models.BooleanField(default=False, help_text="Может выдаваться подарком")
-    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
+    sku = models.CharField(max_length=64, unique=True, verbose_name="артикул (SKU)")
+    barcodes = models.JSONField(default=list, blank=True, verbose_name="штрихкоды")
+    axes = models.JSONField(default=dict, blank=True, verbose_name="оси варианта")
+    axes_key = models.CharField(max_length=500, editable=False, verbose_name="ключ осей")
+    attributes = models.JSONField(default=dict, blank=True, verbose_name="характеристики")
+    mxik_code = models.CharField(max_length=17, validators=[MXIK_VALIDATOR], verbose_name="код ИКПУ")
+    package_code = models.CharField(max_length=20, validators=[DIGITS_VALIDATOR], verbose_name="код упаковки")
+    weight_g = models.PositiveIntegerField(null=True, blank=True, verbose_name="вес, г")
+    images = models.JSONField(default=list, blank=True, verbose_name="фото")
+    giftable = models.BooleanField(
+        default=False, help_text="Может выдаваться подарком", verbose_name="может быть подарком"
+    )
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT, verbose_name="статус")
 
     class Meta:
         verbose_name = "вариант товара"
@@ -275,10 +282,10 @@ class Variant(models.Model):
 
 class AccessoryCompat(models.Model):
     accessory = models.ForeignKey(
-        ProductModel, on_delete=models.CASCADE, related_name="compatible_devices"
+        ProductModel, on_delete=models.CASCADE, related_name="compatible_devices", verbose_name="аксессуар"
     )
     device = models.ForeignKey(
-        ProductModel, on_delete=models.CASCADE, related_name="explicit_accessories"
+        ProductModel, on_delete=models.CASCADE, related_name="explicit_accessories", verbose_name="устройство"
     )
 
     class Meta:
@@ -303,13 +310,13 @@ class AccessoryCompat(models.Model):
 
 class CompatRule(models.Model):
     accessory = models.ForeignKey(
-        ProductModel, on_delete=models.CASCADE, related_name="compat_rules"
+        ProductModel, on_delete=models.CASCADE, related_name="compat_rules", verbose_name="аксессуар"
     )
     conditions = models.JSONField(
         help_text='[{"attr": "charge_port", "op": "eq", "value": "usb-c"}, '
-        '{"attr": "max_charge_w", "op": "lte", "accessory_attr": "output_w"}]'
+        '{"attr": "max_charge_w", "op": "lte", "accessory_attr": "output_w"}]', verbose_name="условия"
     )
-    note = models.CharField(max_length=200, blank=True)
+    note = models.CharField(max_length=200, blank=True, verbose_name="заметка")
 
     class Meta:
         verbose_name = "правило совместимости"

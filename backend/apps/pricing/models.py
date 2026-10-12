@@ -8,10 +8,12 @@ from apps.catalog.models import Brand, Category, Variant
 
 
 class ExchangeRate(models.Model):
-    date = models.DateField(unique=True)
-    cbu_rate = models.DecimalField(max_digits=12, decimal_places=2, help_text="Сумов за 1 USD по ЦБ")
-    spread_pct = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("1.00"))
-    created_at = models.DateTimeField(auto_now_add=True)
+    date = models.DateField(unique=True, verbose_name="дата")
+    cbu_rate = models.DecimalField(
+        max_digits=12, decimal_places=2, help_text="Сумов за 1 USD по ЦБ", verbose_name="курс ЦБ"
+    )
+    spread_pct = models.DecimalField(max_digits=5, decimal_places=2, default=Decimal("1.00"), verbose_name="спред, %")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="создан")
 
     class Meta:
         verbose_name = "курс ЦБ"
@@ -29,14 +31,15 @@ class ExchangeRate(models.Model):
 
 class MarkupRule(models.Model):
     variant = models.ForeignKey(
-        Variant, null=True, blank=True, on_delete=models.CASCADE, related_name="markup_rules"
+        Variant, null=True, blank=True, on_delete=models.CASCADE, related_name="markup_rules",
+        verbose_name="вариант товара"
     )
-    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE)
-    brand = models.ForeignKey(Brand, null=True, blank=True, on_delete=models.CASCADE)
-    markup_pct = models.DecimalField(max_digits=6, decimal_places=2)
-    min_margin_uzs = models.PositiveBigIntegerField(default=0)
-    rounding_step_uzs = models.PositiveIntegerField(default=1000)
-    is_active = models.BooleanField(default=True)
+    category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, verbose_name="категория")
+    brand = models.ForeignKey(Brand, null=True, blank=True, on_delete=models.CASCADE, verbose_name="бренд")
+    markup_pct = models.DecimalField(max_digits=6, decimal_places=2, verbose_name="наценка, %")
+    min_margin_uzs = models.PositiveBigIntegerField(default=0, verbose_name="минимальная маржа, сум")
+    rounding_step_uzs = models.PositiveIntegerField(default=1000, verbose_name="округление, сум")
+    is_active = models.BooleanField(default=True, verbose_name="активен")
 
     class Meta:
         verbose_name = "правило наценки"
@@ -71,13 +74,19 @@ class MarkupRule(models.Model):
 
 
 class PriceSnapshot(models.Model):
-    variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="price_snapshots")
-    price_uzs = models.PositiveBigIntegerField()
-    cost_usd = models.DecimalField(max_digits=12, decimal_places=2)
-    rate = models.DecimalField(max_digits=12, decimal_places=2, help_text="Курс с учётом спреда")
-    offer = models.ForeignKey("sourcing.Offer", null=True, blank=True, on_delete=models.SET_NULL)
-    markup_rule = models.ForeignKey(MarkupRule, null=True, blank=True, on_delete=models.SET_NULL)
-    computed_at = models.DateTimeField(auto_now_add=True)
+    variant = models.ForeignKey(
+        Variant, on_delete=models.CASCADE, related_name="price_snapshots", verbose_name="вариант товара"
+    )
+    price_uzs = models.PositiveBigIntegerField(verbose_name="цена, сум")
+    cost_usd = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="себестоимость, $")
+    rate = models.DecimalField(max_digits=12, decimal_places=2, help_text="Курс с учётом спреда", verbose_name="курс")
+    offer = models.ForeignKey(
+        "sourcing.Offer", null=True, blank=True, on_delete=models.SET_NULL, verbose_name="предложение"
+    )
+    markup_rule = models.ForeignKey(
+        MarkupRule, null=True, blank=True, on_delete=models.SET_NULL, verbose_name="правило наценки"
+    )
+    computed_at = models.DateTimeField(auto_now_add=True, verbose_name="рассчитана")
 
     class Meta:
         verbose_name = "цена"
