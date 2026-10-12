@@ -16,6 +16,8 @@ if env_file.exists() and os.environ.get("DJANGO_READ_ENV_FILE", "1") == "1":
 DEBUG = env.bool("DEBUG", default=False)
 # Учебный режим: всё, что не настроено (оплата, коды входа, Telegram), имитируется. Не для настоящего магазина.
 DEMO_MODE = env.bool("DEMO_MODE", default=False)
+# Учебный режим: seed_demo создаёт сотрудников и пишет их пароли сюда (файл в .gitignore)
+DEMO_ACCOUNTS_FILE = BASE_DIR / "demo-accounts.txt"
 SECRET_KEY = env("SECRET_KEY")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 

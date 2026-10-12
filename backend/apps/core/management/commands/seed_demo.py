@@ -21,6 +21,7 @@ from apps.catalog.models import (
 from apps.catalog.search import rebuild_search_index
 from apps.core import demo_catalog as data
 from apps.core.demo_activity import create_history
+from apps.core.staff import DEMO_ACCOUNTS, apply_roles, ensure_demo_staff
 from apps.inventory.imei import with_check_digit
 from apps.inventory.models import InventoryUnit
 from apps.inventory.services import receive_unit
@@ -67,6 +68,8 @@ class Command(BaseCommand):
         result = reprice_all(rate, now)
         # История магазина — только в учебном режиме: в настоящем магазине выдуманные заказы не нужны.
         orders = create_history(now) if settings.DEMO_MODE else 0
+        apply_roles()
+        staff = ensure_demo_staff(settings.DEMO_ACCOUNTS_FILE) if settings.DEMO_MODE else {}
         rebuild_search_index()
         refresh_listing_cache(now)
         self.stdout.write(
@@ -75,6 +78,12 @@ class Command(BaseCommand):
         )
         if orders:
             self.stdout.write(f"История магазина: {orders} заказов, покупатели и переписка в «Имитации Telegram».")
+        if staff:
+            self.stdout.write("")
+            self.stdout.write("Сотрудники — вход в админку http://localhost:8000/admin:")
+            for account in DEMO_ACCOUNTS:
+                self.stdout.write(f"  {account.title}: логин {account.username}, пароль {staff[account.username]}")
+            self.stdout.write(f"Пароли сохранены в {settings.DEMO_ACCOUNTS_FILE}")
 
     def _categories(self) -> dict[str, Category]:
         result = {}

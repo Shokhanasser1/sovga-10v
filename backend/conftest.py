@@ -75,3 +75,9 @@ def warehouse(db):
     from apps.sourcing.models import Warehouse
 
     return Warehouse.objects.create(name="Ташкент, основной")
+
+
+@pytest.fixture(autouse=True)
+def _demo_accounts_file(settings, tmp_path):
+    """seed_demo в учебном режиме записывает пароли сотрудников — в тестах не в папку проекта."""
+    settings.DEMO_ACCOUNTS_FILE = tmp_path / "demo-accounts.txt"

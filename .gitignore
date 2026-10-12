@@ -8,3 +8,4 @@ db.sqlite3
 staticfiles/
 node_modules/
 e2e/shots/
+demo-accounts.txt
