@@ -65,7 +65,7 @@ with sync_playwright() as p:
     page.wait_for_load_state("networkidle")
     page.screenshot(path=OUT / "1-home.png", full_page=True)
     check(page.get_by_role("heading", level=1).inner_text().startswith("Каждый смартфон"), "главная: заголовок")
-    check(page.locator("#catalog a").count() >= 5, "главная: категории загрузились")
+    check(page.locator("#catalog a").count() >= 8, "главная: все восемь категорий")
     check(page.get_by_text("Учебный магазин").count() == 1, "учебный режим: плашка на витрине")
 
     box = page.get_by_role("combobox")
@@ -87,6 +87,8 @@ with sync_playwright() as p:
     check("сум" in price_before, f"карточка: цена {price_before}")
     check(page.get_by_text("Подарок до").count() == 1, "карточка: лента подарка")
     check(page.get_by_text("Характеристики").count() == 1, "карточка: характеристики")
+    check(page.get_by_role("heading", name="Описание").count() == 1 and "титановом корпусе" in page.content(),
+          "карточка: описание товара")
     page.get_by_role("button", name="512").click()
     page.wait_for_timeout(300)
     price_after = page.locator("[aria-live=polite] .price").inner_text()
