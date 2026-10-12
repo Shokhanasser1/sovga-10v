@@ -6,7 +6,7 @@ from django.utils import timezone
 from apps.catalog.labels import variant_title
 from apps.delivery.models import Shipment
 from apps.notifications.outbox import register
-from apps.notifications.telegram import notify_managers, send_message
+from apps.notifications.telegram import notify_managers, send_message, simulated
 from apps.orders.models import Order, SupplierRequest
 from apps.orders.supplier_requests import OPEN, supplier_lines
 from apps.sourcing.models import SupplierSkuMap
@@ -89,7 +89,7 @@ def status_text(order: Order, previous: str | None, status: str, note: str) -> s
 
 @register("order.status")
 def notify_customer(payload: dict) -> None:
-    if _is_quiet(payload.get("from"), payload["to"]) or not settings.TELEGRAM_BOT_TOKEN:
+    if _is_quiet(payload.get("from"), payload["to"]) or not (settings.TELEGRAM_BOT_TOKEN or simulated()):
         return
     order = Order.objects.select_related("customer").filter(number=payload["number"]).first()
     if order is None or not order.customer.telegram_chat_id:

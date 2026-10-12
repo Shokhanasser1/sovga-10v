@@ -5,10 +5,11 @@ from django.urls import reverse
 
 from apps.bot.demo import DEMO_MANAGER_CHAT, customer_chat, supplier_chat
 from apps.bot.models import DemoMessage
+from apps.notifications.outbox import deliver_pending
 from apps.notifications.telegram import notify_managers, send_message
 from apps.orders.models import Order, SupplierRequest
 from apps.orders.quote import CartItem
-from apps.orders.services import DeliveryAddress, create_order
+from apps.orders.services import DeliveryAddress, cancel_order, create_order
 from apps.orders.tests.conftest import stock
 from apps.sourcing.models import Offer, Supplier
 
@@ -94,6 +95,18 @@ def test_supplier_answers_from_the_simulator(admin_client, supplier_order, custo
     assert order.status == Order.Status.CONFIRMED
     message.refresh_from_db()
     assert message.reply_markup is None and "заказ подтверждён" in message.text
+
+
+def test_customer_gets_order_statuses_in_the_simulator(demo, shop, customer):
+    customer.telegram_chat_id = customer_chat(customer)
+    customer.save()
+    order = create_order(customer, [CartItem("IP16P-256-B", 1)], "card", DeliveryAddress("Ташкент"), "", NOW)
+
+    cancel_order(order, NOW, "customer", "Передумал", by_customer=True)
+    deliver_pending(NOW)
+
+    message = DemoMessage.objects.get(chat_id=customer.telegram_chat_id)
+    assert order.number in message.text and "Отменён" in message.text
 
 
 def test_typing_as_a_chat(admin_client, demo):
