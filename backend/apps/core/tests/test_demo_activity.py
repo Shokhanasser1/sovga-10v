@@ -76,3 +76,17 @@ def test_no_history_outside_learning_mode(settings):
 
     assert not Order.objects.exists()
     assert not Customer.objects.exists()
+
+
+def test_simulator_dates_history_messages_by_their_events(learning_mode):
+    started = timezone.now()
+
+    seed()
+
+    messages = DemoMessage.objects.order_by("pk")
+    assert messages.filter(created_at__lt=started - timedelta(days=30)).exists(), "старые заказы — старые сообщения"
+    times = list(messages.values_list("created_at", flat=True))
+    assert times == sorted(times), "переписка в чатах идёт по порядку"
+    order = Order.objects.filter(status=S.COMPLETED).order_by("created_at").first()
+    first = DemoMessage.objects.filter(chat_id=DEMO_MANAGER_CHAT, text__contains=order.number).order_by("pk").first()
+    assert first.created_at == order.created_at, "«Новый заказ» — в минуту оформления"

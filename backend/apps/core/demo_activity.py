@@ -12,6 +12,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from apps.bot import demo as demo_chats
+from apps.bot.models import DemoMessage
 from apps.customers.models import Customer
 from apps.customers.services import customer_for_phone
 from apps.delivery.carriers import Handover
@@ -19,6 +20,7 @@ from apps.delivery.models import Shipment
 from apps.inventory.imei import with_check_digit
 from apps.inventory.models import InventoryUnit
 from apps.notifications import telegram
+from apps.notifications.models import OutboxEvent
 from apps.notifications.outbox import deliver_pending
 from apps.orders.fulfilment import add_unit, deliver, ship, start_picking
 from apps.orders.models import Order
@@ -251,13 +253,19 @@ def _warranty(orders: list[Order], now: datetime) -> None:
 
 
 def _deliver_events(now: datetime) -> None:
-    """Учебный режим без токена: события сразу попадают в «Имитацию Telegram»."""
+    """Учебный режим без токена: события сразу попадают в «Имитацию Telegram» — по порядку и со своим временем.
+
+    Каждое событие доставляется в момент, когда оно случилось, а сообщения бота получают это же время:
+    переписка о заказе полуторамесячной давности датирована тем днём, а не запуском seed_demo.
+    """
     if not telegram.simulated():
         return
-    for _ in range(100):
-        result = deliver_pending(now)
-        if not (result.done or result.retried or result.failed):
-            return
+    pending = OutboxEvent.objects.filter(status=OutboxEvent.Status.PENDING, next_attempt_at__lte=now)
+    while event := pending.order_by("next_attempt_at", "pk").first():
+        at = event.next_attempt_at
+        last = DemoMessage.objects.order_by("-pk").values_list("pk", flat=True).first() or 0
+        deliver_pending(at, limit=1)
+        DemoMessage.objects.filter(pk__gt=last).update(created_at=at)
 
 
 def create_history(now: datetime) -> int:
