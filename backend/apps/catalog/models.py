@@ -20,7 +20,8 @@ class Category(models.Model):
     warranty_months = models.PositiveSmallIntegerField(default=12, help_text="Срок гарантии, месяцев с продажи")
 
     class Meta:
-        verbose_name_plural = "categories"
+        verbose_name = "категория"
+        verbose_name_plural = "категории"
 
     def __str__(self) -> str:
         return self.name_ru
@@ -101,6 +102,8 @@ class AttributeDefinition(models.Model):
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
+        verbose_name = "характеристика"
+        verbose_name_plural = "характеристики"
         constraints = [
             models.UniqueConstraint(
                 fields=["category", "code"], name="unique_attribute_code_per_category"
@@ -140,6 +143,10 @@ class Brand(models.Model):
     slug = models.SlugField(unique=True)
     name = models.CharField(max_length=100)
 
+    class Meta:
+        verbose_name = "бренд"
+        verbose_name_plural = "бренды"
+
     def __str__(self) -> str:
         return self.name
 
@@ -163,6 +170,10 @@ class ProductModel(models.Model):
     # Кэш для листинга, обновляет run_jobs: цена «от» и есть ли хоть что-то в продаже
     price_from_uzs = models.PositiveBigIntegerField(null=True, blank=True, editable=False)
     is_available = models.BooleanField(default=False, editable=False)
+
+    class Meta:
+        verbose_name = "товар"
+        verbose_name_plural = "товары"
 
     def __str__(self) -> str:
         return self.name_ru
@@ -215,6 +226,8 @@ class Variant(models.Model):
     status = models.CharField(max_length=10, choices=Status.choices, default=Status.DRAFT)
 
     class Meta:
+        verbose_name = "вариант товара"
+        verbose_name_plural = "варианты товаров"
         constraints = [
             models.UniqueConstraint(
                 fields=["product_model", "axes_key"], name="unique_variant_axes"
@@ -269,6 +282,8 @@ class AccessoryCompat(models.Model):
     )
 
     class Meta:
+        verbose_name = "совместимость аксессуара"
+        verbose_name_plural = "совместимость аксессуаров"
         constraints = [
             models.UniqueConstraint(fields=["accessory", "device"], name="unique_accessory_device")
         ]
@@ -296,6 +311,10 @@ class CompatRule(models.Model):
     )
     note = models.CharField(max_length=200, blank=True)
 
+    class Meta:
+        verbose_name = "правило совместимости"
+        verbose_name_plural = "правила совместимости"
+
     def __str__(self) -> str:
         return f"Правило для {self.accessory}"
 
@@ -310,6 +329,10 @@ class SearchSynonym(models.Model):
         max_length=100, unique=True, help_text="Как пишут покупатели: «айфон», «aypon»"
     )
     replacement = models.CharField(max_length=100, help_text="Как в каталоге: «iphone»")
+
+    class Meta:
+        verbose_name = "синоним поиска"
+        verbose_name_plural = "синонимы поиска"
 
     def __str__(self) -> str:
         return f"{self.term} → {self.replacement}"

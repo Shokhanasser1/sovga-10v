@@ -1,6 +1,10 @@
 from django.contrib import admin
 from django.urls import include, path
 
+admin.site.site_header = "Sovgʻa — управление магазином"
+admin.site.site_title = "Sovgʻa"
+admin.site.index_title = "Магазин"
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("apps.core.urls")),

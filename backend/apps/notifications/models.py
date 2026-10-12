@@ -19,6 +19,8 @@ class OutboxEvent(models.Model):
     processed_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        verbose_name = "событие"
+        verbose_name_plural = "очередь событий"
         ordering = ["-pk"]
 
     def __str__(self) -> str:

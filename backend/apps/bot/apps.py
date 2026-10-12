@@ -3,6 +3,7 @@ from django.apps import AppConfig
 
 class BotConfig(AppConfig):
     name = "apps.bot"
+    verbose_name = "Telegram-бот"
 
     def ready(self) -> None:
         from apps.notifications.telegram import use_demo_transport

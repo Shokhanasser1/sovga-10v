@@ -21,7 +21,8 @@ class GiftPolicy(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name_plural = "gift policies"
+        verbose_name = "правило подарка"
+        verbose_name_plural = "правила подарков"
 
     def __str__(self) -> str:
         return self.name

@@ -43,6 +43,10 @@ class Supplier(models.Model):
     )
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        verbose_name = "поставщик"
+        verbose_name_plural = "поставщики"
+
     def __str__(self) -> str:
         return self.name
 
@@ -58,6 +62,10 @@ class Warehouse(models.Model):
     name = models.CharField(max_length=200)
     address = models.CharField(max_length=300, blank=True)
     is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "склад"
+        verbose_name_plural = "склады"
 
     def __str__(self) -> str:
         return self.name
@@ -78,6 +86,8 @@ class Offer(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        verbose_name = "предложение"
+        verbose_name_plural = "предложения"
         constraints = [
             models.CheckConstraint(
                 condition=Q(supplier__isnull=False, warehouse__isnull=True)
@@ -108,6 +118,8 @@ class SupplierSkuMap(models.Model):
     variant = models.ForeignKey(Variant, on_delete=models.CASCADE, related_name="supplier_codes")
 
     class Meta:
+        verbose_name = "артикул поставщика"
+        verbose_name_plural = "артикулы поставщиков"
         constraints = [
             models.UniqueConstraint(fields=["supplier", "supplier_code"], name="unique_supplier_code")
         ]
@@ -126,6 +138,8 @@ class SupplierFeedRun(models.Model):
     error = models.TextField(blank=True)
 
     class Meta:
+        verbose_name = "загрузка прайса"
+        verbose_name_plural = "загрузки прайсов"
         ordering = ["-started_at", "-pk"]
 
     def __str__(self) -> str:
@@ -148,6 +162,10 @@ class SupplierFeedRow(models.Model):
     error = models.CharField(max_length=200, blank=True)
     variant = models.ForeignKey(Variant, null=True, blank=True, on_delete=models.SET_NULL)
 
+    class Meta:
+        verbose_name = "строка прайса"
+        verbose_name_plural = "строки прайсов"
+
     def __str__(self) -> str:
         return f"{self.supplier_code} {self.name}".strip()
 
@@ -160,6 +178,10 @@ class Reservation(models.Model):
     expires_at = models.DateTimeField()
     released_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "резерв"
+        verbose_name_plural = "резервы"
 
     def __str__(self) -> str:
         return f"{self.ref}: {self.offer} × {self.qty}"

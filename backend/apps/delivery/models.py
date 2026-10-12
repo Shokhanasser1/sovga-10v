@@ -18,5 +18,9 @@ class Shipment(models.Model):
     handed_at = models.DateTimeField()
     delivered_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        verbose_name = "доставка"
+        verbose_name_plural = "доставки"
+
     def __str__(self) -> str:
         return f"{self.order} — {self.get_carrier_display()}"

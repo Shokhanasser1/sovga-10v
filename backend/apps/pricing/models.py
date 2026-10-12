@@ -14,6 +14,8 @@ class ExchangeRate(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = "курс ЦБ"
+        verbose_name_plural = "курсы ЦБ"
         ordering = ["-date"]
         get_latest_by = "date"
 
@@ -37,6 +39,8 @@ class MarkupRule(models.Model):
     is_active = models.BooleanField(default=True)
 
     class Meta:
+        verbose_name = "правило наценки"
+        verbose_name_plural = "правила наценки"
         constraints = [
             models.UniqueConstraint(
                 fields=["variant"], condition=Q(is_active=True), name="unique_active_variant_markup"
@@ -76,6 +80,8 @@ class PriceSnapshot(models.Model):
     computed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = "цена"
+        verbose_name_plural = "история цен"
         ordering = ["-computed_at", "-pk"]
 
     def __str__(self) -> str:

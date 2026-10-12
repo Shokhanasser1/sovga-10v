@@ -29,6 +29,8 @@ class Payment(models.Model):
     raw = models.JSONField(default=dict, blank=True)
 
     class Meta:
+        verbose_name = "платёж"
+        verbose_name_plural = "платежи"
         ordering = ["-created_at", "-pk"]
         constraints = [
             models.UniqueConstraint(fields=["provider", "external_id"], name="unique_provider_transaction")

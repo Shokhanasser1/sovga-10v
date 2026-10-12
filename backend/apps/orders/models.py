@@ -43,6 +43,8 @@ class Order(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        verbose_name = "заказ"
+        verbose_name_plural = "заказы"
         ordering = ["-created_at", "-pk"]
 
     def __str__(self) -> str:
@@ -66,6 +68,8 @@ class OrderLine(models.Model):
     )
 
     class Meta:
+        verbose_name = "строка заказа"
+        verbose_name_plural = "строки заказа"
         ordering = ["pk"]
 
     def __str__(self) -> str:
@@ -83,6 +87,8 @@ class OrderEvent(models.Model):
     created_at = models.DateTimeField()
 
     class Meta:
+        verbose_name = "событие заказа"
+        verbose_name_plural = "история заказов"
         ordering = ["created_at", "pk"]
 
     def __str__(self) -> str:
@@ -110,6 +116,8 @@ class SupplierRequest(models.Model):
     alerted_at = models.DateTimeField(null=True, blank=True, help_text="Когда менеджерам сообщили, что поставщик молчит")
 
     class Meta:
+        verbose_name = "запрос поставщику"
+        verbose_name_plural = "запросы поставщикам"
         constraints = [models.UniqueConstraint(fields=["order", "supplier"], name="unique_supplier_request")]
 
     def __str__(self) -> str:
@@ -146,6 +154,8 @@ class ReturnRequest(models.Model):
     refunded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
+        verbose_name = "возврат"
+        verbose_name_plural = "возвраты"
         ordering = ["-pk"]
 
     def __str__(self) -> str:

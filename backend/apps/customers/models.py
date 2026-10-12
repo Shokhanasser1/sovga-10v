@@ -16,6 +16,10 @@ class Customer(models.Model):
     telegram_chat_id = models.BigIntegerField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    class Meta:
+        verbose_name = "покупатель"
+        verbose_name_plural = "покупатели"
+
     def __str__(self) -> str:
         return self.name or self.phone
 
@@ -29,7 +33,8 @@ class Address(models.Model):
     last_used_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name_plural = "addresses"
+        verbose_name = "адрес"
+        verbose_name_plural = "адреса"
         ordering = ["-last_used_at"]
 
     def __str__(self) -> str:
@@ -49,6 +54,8 @@ class OtpCode(models.Model):
     ip = models.GenericIPAddressField(null=True, blank=True)
 
     class Meta:
+        verbose_name = "код входа"
+        verbose_name_plural = "коды входа"
         ordering = ["-created_at"]
 
     def __str__(self) -> str:
@@ -60,6 +67,10 @@ class OtpPhone(models.Model):
 
     phone = models.CharField(max_length=13, primary_key=True)
     locked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "номер для кодов входа"
+        verbose_name_plural = "номера для кодов входа"
 
     def __str__(self) -> str:
         return self.phone

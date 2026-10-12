@@ -19,6 +19,10 @@ class TelegramLink(models.Model):
     expires_at = models.DateTimeField()
     used_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        verbose_name = "ссылка на Telegram"
+        verbose_name_plural = "ссылки на Telegram"
+
     def __str__(self) -> str:
         return f"{self.get_kind_display()}: {self.customer or self.supplier}"
 

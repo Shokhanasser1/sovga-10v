@@ -15,7 +15,8 @@ class PurchaseBatch(models.Model):
     note = models.CharField(max_length=200, blank=True)
 
     class Meta:
-        verbose_name_plural = "purchase batches"
+        verbose_name = "партия закупки"
+        verbose_name_plural = "партии закупки"
 
     def __str__(self) -> str:
         return f"Партия {self.pk} от {self.received_at:%Y-%m-%d}"
@@ -57,6 +58,8 @@ class InventoryUnit(models.Model):
     received_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
+        verbose_name = "устройство на складе"
+        verbose_name_plural = "устройства на складе"
         constraints = [
             models.UniqueConstraint(
                 fields=["imei1"],
