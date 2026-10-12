@@ -146,12 +146,15 @@ export function fetchQuote(items: CartRequestItem[], signal?: AbortSignal): Prom
   );
 }
 
+export type PaymentMethod = "card" | "cod";
+
 export function createOrder(body: {
   items: CartRequestItem[];
   address: { text: string; landmark: string };
   comment: string;
+  payment_method: PaymentMethod;
 }): Promise<Order> {
-  return post("/api/v1/orders/", orderSchema, { ...body, payment_method: "card" });
+  return post("/api/v1/orders/", orderSchema, body);
 }
 
 export function fetchOrders(): Promise<Order[]> {

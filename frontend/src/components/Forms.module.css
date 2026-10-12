@@ -103,6 +103,42 @@
   cursor: default;
 }
 
+.choice {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.choice legend {
+  margin-bottom: 4px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-small);
+  background: var(--glaze);
+  cursor: pointer;
+}
+
+.option:has(input:checked) {
+  border-color: var(--cobalt);
+}
+
+.option input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--cobalt);
+}
+
 .checkout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;

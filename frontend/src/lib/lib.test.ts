@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { apiUrl } from "./api-client";
 import { COMPARE_KEY, addToCompare, readCompare, removeFromCompare, type CompareItem } from "./compare-store";
-import { deliveryText, formatPriceFrom, formatSum, formatValue, paragraphs } from "./format";
+import { deliveryText, dueOnDelivery, eventTitle, formatPriceFrom, formatSum, formatValue, paragraphs } from "./format";
+import { quoteSchema } from "./schemas";
 import { formatDate } from "./navigation";
 import { kindFor } from "../components/DeviceArt";
 import {
@@ -181,5 +182,37 @@ describe("labels for the demo catalog", () => {
     expect(kindFor("smartwatches")).toBe("watch");
     expect(kindFor("screen-protectors")).toBe("glass");
     expect(kindFor("power-banks")).toBe("powerbank");
+  });
+});
+
+describe("cash on delivery", () => {
+  it("names both ways to pay in both languages", () => {
+    expect(getDictionary("ru").paymentMethods.cod).toContain("При получении");
+    expect(getDictionary("uz").paymentMethods.cod).toContain("Qabul qilishda");
+    expect(getDictionary("ru").paymentMethods.card).toContain("Payme");
+    expect(getDictionary("ru").codDue(formatSum(14_080_000, "ru"))).toContain(`14${NBSP}080${NBSP}000`);
+  });
+
+  it("asks to have the money ready until the courier hands the order over", () => {
+    expect(dueOnDelivery({ payment_method: "cod", status: "cod" })).toBe(true);
+    expect(dueOnDelivery({ payment_method: "cod", status: "handed_to_carrier" })).toBe(true);
+    expect(dueOnDelivery({ payment_method: "cod", status: "delivered" })).toBe(false);
+    expect(dueOnDelivery({ payment_method: "cod", status: "cancelled" })).toBe(false);
+    expect(dueOnDelivery({ payment_method: "card", status: "picking" })).toBe(false);
+  });
+
+  it("reads which payment methods the shop accepts, card when the server does not say", () => {
+    const quote = { lines: [], total_uzs: 0, errors: [], can_order: false };
+    expect(quoteSchema.parse(quote).payment_methods).toEqual(["card"]);
+    expect(quoteSchema.parse({ ...quote, payment_methods: ["card", "cod"] }).payment_methods).toEqual(["card", "cod"]);
+  });
+});
+
+describe("order timeline", () => {
+  it("does not say «waiting for payment» to a cash on delivery customer", () => {
+    expect(eventTitle("cod", "confirmed", "ru")).toBe("Заказ принят");
+    expect(eventTitle("cod", "confirmed", "uz")).toBe("Buyurtma qabul qilindi");
+    expect(eventTitle("card", "confirmed", "ru")).toBe("Ждёт оплаты");
+    expect(eventTitle("cod", "cod", "ru")).toBe("Оплата при получении");
   });
 });

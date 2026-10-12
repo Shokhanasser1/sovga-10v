@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { ApiClientError, cancelOrder, fetchOrder, payLink, telegramLink } from "@/lib/api-client";
-import { formatSum, withVariant } from "@/lib/format";
+import { dueOnDelivery, eventTitle, formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
 import { formatDate, formatDateTime } from "@/lib/navigation";
 import type { Order } from "@/lib/schemas";
@@ -90,6 +90,11 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
           {error}
         </p>
       )}
+      {dueOnDelivery(order) && (
+        <div className={styles.notice}>
+          <p>{dict.codDue(formatSum(order.total_uzs, lang))}</p>
+        </div>
+      )}
       {order.can_pay && (
         <div className={styles.notice}>
           <p>{dict.priceLocked(formatDateTime(order.price_lock_until, lang))}</p>
@@ -160,7 +165,7 @@ export function OrderView({ lang, number }: { lang: Locale; number: string }) {
         <ol className={`${forms.card} ${styles.timeline}`}>
           {order.events.map((event) => (
             <li key={`${event.status}-${event.at}`}>
-              <strong>{dict.orderStatus[event.status]}</strong>
+              <strong>{eventTitle(order.payment_method, event.status, lang)}</strong>
               <span>{formatDateTime(event.at, lang)}</span>
               {event.note && <span>{event.note}</span>}
             </li>

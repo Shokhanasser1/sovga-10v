@@ -160,6 +160,8 @@ export const quoteSchema = z.object({
   total_uzs: z.number(),
   errors: z.array(z.string()),
   can_order: z.boolean(),
+  // Чем можно заплатить при оформлении; старый сервер не присылает — только картой
+  payment_methods: z.array(z.string()).default(["card"]),
 });
 
 export const ORDER_STATUSES = [

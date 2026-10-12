@@ -1,4 +1,5 @@
 import { enumLabel, getDictionary, unitLabel, type Locale } from "./i18n";
+import type { OrderStatus } from "./schemas";
 
 export type AttrValue = string | number | boolean;
 
@@ -45,6 +46,17 @@ export function deliveryText(
   const when =
     leadDays === 0 ? dict.deliveryToday : leadDays === 1 ? dict.deliveryTomorrow : dict.deliveryIn(leadDays);
   return `${label} — ${when}`;
+}
+
+/** Оплата при получении: пока курьер не отдал заказ, покупателю нужно приготовить деньги. */
+export function dueOnDelivery(order: { payment_method: string; status: string }): boolean {
+  return order.payment_method === "cod" && ["cod", "picking", "handed_to_carrier"].includes(order.status);
+}
+
+/** Шаг в истории заказа. При оплате курьеру «Ждёт оплаты» сбивает с толку — заказ просто принят. */
+export function eventTitle(paymentMethod: string, status: OrderStatus, locale: Locale): string {
+  const dict = getDictionary(locale);
+  return paymentMethod === "cod" && status === "confirmed" ? dict.orderAccepted : dict.orderStatus[status];
 }
 
 /** «Чехол Spigen · Чёрный» — название и значения осей варианта (цвет и т. п.). */

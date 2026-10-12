@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 
-import { createOrder, fetchMe } from "@/lib/api-client";
+import { createOrder, fetchMe, type PaymentMethod } from "@/lib/api-client";
 import { clearCart } from "@/lib/cart-store";
 import { formatSum, withVariant } from "@/lib/format";
 import { getDictionary, localized, type Locale } from "@/lib/i18n";
@@ -22,6 +22,7 @@ export function CheckoutView({ lang }: { lang: Locale }) {
   const [address, setAddress] = useState("");
   const [landmark, setLandmark] = useState("");
   const [comment, setComment] = useState("");
+  const [payment, setPayment] = useState<PaymentMethod>("card");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -46,7 +47,9 @@ export function CheckoutView({ lang }: { lang: Locale }) {
     setBusy(true);
     setError("");
     try {
-      const order = await createOrder({ items: toRequestItems(items), address: { text: address, landmark }, comment });
+      const order = await createOrder({
+        items: toRequestItems(items), address: { text: address, landmark }, comment, payment_method: payment,
+      });
       clearCart();
       router.push(`/${lang}/orders/${order.number}`);
     } catch (failure) {
@@ -67,6 +70,7 @@ export function CheckoutView({ lang }: { lang: Locale }) {
   }
 
   const problem = error || quoteError || quote?.errors[0] || quote?.lines.flatMap((line) => line.errors)[0];
+  const methods = (["card", "cod"] as const).filter((method) => quote?.payment_methods.includes(method));
   return (
     <div className={`container ${styles.wide}`}>
       <h1 className={`display ${styles.title}`}>{dict.checkout}</h1>
@@ -92,8 +96,23 @@ export function CheckoutView({ lang }: { lang: Locale }) {
             <textarea id="comment" maxLength={500} value={comment} placeholder={dict.commentPlaceholder}
               onChange={(event) => setComment(event.target.value)} />
           </div>
-          <p className={styles.label}>{dict.payment}</p>
-          <p className={styles.hint}>{dict.paymentCard}</p>
+          {methods.length > 1 ? (
+            <fieldset className={styles.choice}>
+              <legend className={styles.label}>{dict.payment}</legend>
+              {methods.map((method) => (
+                <label key={method} className={styles.option}>
+                  <input type="radio" name="payment" value={method} checked={payment === method}
+                    onChange={() => setPayment(method)} />
+                  <span>{dict.paymentMethods[method]}</span>
+                </label>
+              ))}
+            </fieldset>
+          ) : (
+            <>
+              <p className={styles.label}>{dict.payment}</p>
+              <p className={styles.hint}>{dict.paymentCard}</p>
+            </>
+          )}
         </div>
         <aside className={styles.card}>
           {quote?.lines.map((line) => (

@@ -41,7 +41,7 @@ def open_cart(page) -> None:
         raise
 
 
-def place_order(page, screenshot: str = "") -> str:
+def place_order(page, screenshot: str = "", status: str = "Ждёт оплаты") -> str:
     """Заполняет адрес на оформлении, подтверждает и ждёт страницу заказа. Возвращает номер заказа."""
     page.get_by_label("Адрес доставки").fill("Ташкент, Юнусабад 4-12, кв. 7")
     page.get_by_label("Ориентир для курьера").fill("напротив школы №110")
@@ -50,7 +50,7 @@ def place_order(page, screenshot: str = "") -> str:
         page.screenshot(path=OUT / screenshot, full_page=True)
     page.get_by_role("button", name="Подтвердить заказ").click()
     page.wait_for_url("**/ru/orders/SG*", timeout=15000)
-    page.wait_for_selector("text=Ждёт оплаты", timeout=10000)
+    page.wait_for_selector(f"text={status}", timeout=10000)
     return page.url.rstrip("/").rsplit("/", 1)[1]
 
 
@@ -206,6 +206,19 @@ with sync_playwright() as p:
     buyer.get_by_role("button", name="Отменить заказ").click()
     buyer.wait_for_selector("text=Отменён", timeout=10000)
     check(buyer.get_by_role("button", name="Отменить заказ").count() == 0, "заказ отменён покупателем")
+
+    # Третий заказ — с оплатой при получении: сразу на сборку, онлайн-оплаты нет, до сборки можно отменить.
+    open_cart(buyer)
+    buyer.get_by_role("link", name="Оформить заказ").click()
+    buyer.wait_for_url("**/ru/checkout", timeout=10000)
+    buyer.get_by_label("При получении — наличными или картой курьеру").check()
+    place_order(buyer, screenshot="14-checkout-cod.png", status="Оплата курьеру при получении")
+    buyer.screenshot(path=OUT / "15-order-cod.png", full_page=True)
+    check(buyer.locator("[data-status=cod]").count() == 1, "оплата при получении: статус заказа")
+    check(buyer.get_by_role("button", name="Оплатить через Payme").count() == 0, "оплата при получении: без онлайн-оплаты")
+    buyer.get_by_role("button", name="Отменить заказ").click()
+    buyer.wait_for_selector("text=Отменён", timeout=10000)
+    check(True, "оплата при получении: покупатель отменил заказ до сборки")
 
     real_errors = [e for e in errors if "favicon" not in e and "404" not in e]
     check(not real_errors, f"ошибки в консоли: {real_errors[:3]}")
